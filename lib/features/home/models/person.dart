@@ -1,45 +1,53 @@
 class Person {
   const Person({
     required this.id,
-    required this.branchId,
-    this.firstName,
-    this.lastName,
-    this.middleName,
-    this.birthDate,
-    this.deathDate,
-    this.photo,
-    this.description,
+    required this.name,
+    this.parentId,
+    this.birthYear,
+    this.deathYear,
+    this.image,
+    this.author,
+    this.depth,
+    this.path,
+    this.metaStatus,
+    this.locked,
+    this.orderBy,
+    this.childrenCount,
     this.createdAt,
     this.updatedAt,
   });
 
-  final int id;
-  final int branchId;
-  final String? firstName;
-  final String? lastName;
-  final String? middleName;
-  final DateTime? birthDate;
-  final DateTime? deathDate;
-  final String? photo;
-  final String? description;
+  final String id;
+  final String name;
+  final String? parentId;
+  final int? birthYear;
+  final int? deathYear;
+  final String? image;
+  final String? author;
+  final int? depth;
+  final String? path;
+  final String? metaStatus;
+  final String? locked;
+  final String? orderBy;
+  final int? childrenCount;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
   factory Person.fromJson(Map<String, dynamic> json) {
     return Person(
-      id: json['id'] as int,
-      branchId: json['branch_id'] as int,
-      firstName: json['first_name'] as String?,
-      lastName: json['last_name'] as String?,
-      middleName: json['middle_name'] as String?,
-      birthDate: json['birth_date'] != null
-          ? DateTime.tryParse(json['birth_date'] as String)
-          : null,
-      deathDate: json['death_date'] != null
-          ? DateTime.tryParse(json['death_date'] as String)
-          : null,
-      photo: json['photo'] as String?,
-      description: json['description'] as String?,
+      id: json['id'] as String,
+      name: json['name'] as String? ?? 'Unknown',
+      parentId: json['parent_id'] as String?,
+      birthYear: json['birth_year'] as int?,
+      deathYear: json['death_year'] as int?,
+      image: json['image'] as String?,
+      author: json['author'] as String?,
+      depth: json['depth'] as int?,
+      path: json['path'] as String?,
+      metaStatus: json['meta_status'] as String?,
+      locked: json['locked'] as String?,
+      orderBy: json['orderby'] as String?,
+      childrenCount: json['children_count'] as int?,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
@@ -51,19 +59,18 @@ class Person {
 
   factory Person.fromMap(Map<String, dynamic> map) => Person.fromJson(map);
 
-  String get fullName {
-    final parts = [
-      lastName,
-      firstName,
-      middleName,
-    ]
-        .whereType<String>()
-        .map((value) => value.trim())
-        .where((value) => value.isNotEmpty)
-        .toList();
+  String get displayName => name;
 
-    return parts.isEmpty ? 'Person #$id' : parts.join(' ');
+  DateTime? get birthDate {
+    if (birthYear == null) return null;
+    return DateTime(birthYear!);
   }
 
-  String get displayName => fullName;
+  DateTime? get deathDate {
+    if (deathYear == null) return null;
+    return DateTime(deathYear!);
+  }
+
+  // For backwards compatibility - treating this person as both person and "branch"
+  int get branchId => int.tryParse(id) ?? 0;
 }

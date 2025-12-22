@@ -11,7 +11,7 @@ class App extends StatelessWidget {
       title: 'Genealogy',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
-      home: const HomeTabsScreen(),
+      home: const HomeScreen(),
     );
   }
 }

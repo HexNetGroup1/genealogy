@@ -1,89 +1,183 @@
 import '../models/family_member.dart';
 
+/// Тестовые данные семьи (20 человек) на русском языке.
+/// Иерархия: Прадед -> Деды -> Родители -> Дети -> Внуки
 const List<FamilyMember> sampleFamily = [
+  // === ПРАДЕД ===
   FamilyMember(
-    id: 'alexei',
-    fullName: 'Aleksei Zhezhir',
-    lifeSpan: '1921–1998',
-    role: 'Founder of the archive',
-    story:
-        'Aleksei documented the family history in notebooks during long train rides. '
-        'After World War II he dedicated every spring to visiting relatives and recording their stories.',
-    highlights: ['War veteran', 'Amateur historian'],
-    childrenIds: ['boris', 'daria'],
+    id: 'p1',
+    fullName: 'Ахмет Мухамедович Кунафин',
+    lifeSpan: '1920–1998',
+    role: 'Основатель рода',
+    story: 'Ахмет был уважаемым аксакалом, который пережил войну и поднял большую семью. Его всегда помнят за мудрость и доброту.',
+    highlights: ['Ветеран ВОВ', 'Основатель'],
+    childrenIds: ['p2', 'p3', 'p4'],
+  ),
+
+  // === ДЕДЫ (3 человека) ===
+  FamilyMember(
+    id: 'p2',
+    fullName: 'Рашид Ахметович Кунафин',
+    lifeSpan: '1945–2015',
+    role: 'Учитель',
+    story: 'Рашид преподавал историю в сельской школе более 40 лет. Воспитал несколько поколений односельчан.',
+    highlights: ['Заслуженный учитель'],
+    childrenIds: ['p5', 'p6'],
   ),
   FamilyMember(
-    id: 'boris',
-    fullName: 'Boris Zhezhir',
-    lifeSpan: '1948–2012',
-    role: 'Cartographer',
-    story:
-        'Boris digitized Aleksei\'s notes and built the first map that connected each branch '
-        'of the Zhezhir family. He believed a good map helps people feel at home anywhere.',
-    highlights: ['Mapped 136 relatives', 'Loved mountain hikes'],
-    childrenIds: ['ivan', 'nina'],
+    id: 'p3',
+    fullName: 'Фаниля Ахметовна Галимова',
+    lifeSpan: '1948–2020',
+    role: 'Врач',
+    story: 'Фаниля работала терапевтом в районной больнице. Её называли "доктор с золотыми руками".',
+    highlights: ['Врач высшей категории'],
+    childrenIds: ['p7', 'p8'],
   ),
   FamilyMember(
-    id: 'daria',
-    fullName: 'Daria Zhezhir',
-    lifeSpan: '1953–',
-    role: 'Storyteller',
-    story:
-        'Daria turned bedtime stories into full length family chronicles. She is still the person '
-        'everyone calls when they need to verify a detail about the family tree.',
-    highlights: ['Hosts summer reunions'],
-    childrenIds: ['olga'],
+    id: 'p4',
+    fullName: 'Ильдар Ахметович Кунафин',
+    lifeSpan: '1952–',
+    role: 'Агроном',
+    story: 'Ильдар всю жизнь занимается сельским хозяйством. Его пшеница всегда самая урожайная в районе.',
+    highlights: ['Живёт в деревне'],
+    childrenIds: ['p9', 'p10'],
+  ),
+
+  // === РОДИТЕЛИ (6 человек) ===
+  FamilyMember(
+    id: 'p5',
+    fullName: 'Марат Рашидович Кунафин',
+    lifeSpan: '1970–',
+    role: 'Инженер',
+    story: 'Марат работает на нефтеперерабатывающем заводе. Он увлекается рыбалкой и походами.',
+    highlights: ['Любит природу'],
+    childrenIds: ['p11', 'p12'],
   ),
   FamilyMember(
-    id: 'ivan',
-    fullName: 'Ivan Zhezhir',
-    lifeSpan: '1973–',
-    role: 'Archivist',
-    story:
-        'Ivan rescued boxes of tapes from a flooded basement and digitized every recording. '
-        'He now curates the Supabase collections for the genealogy project.',
-    highlights: ['Keeps analog tape collection'],
-    childrenIds: ['mira'],
+    id: 'p6',
+    fullName: 'Алия Рашидовна Хасанова',
+    lifeSpan: '1974–',
+    role: 'Бухгалтер',
+    story: 'Алия ведёт семейную бухгалтерию и помогает родственникам с налоговыми декларациями.',
+    highlights: ['Главный бухгалтер'],
+    childrenIds: ['p13'],
   ),
   FamilyMember(
-    id: 'nina',
-    fullName: 'Nina Zhezhir',
+    id: 'p7',
+    fullName: 'Тимур Ринатович Галимов',
+    lifeSpan: '1972–',
+    role: 'Строитель',
+    story: 'Тимур построил половину домов в родной деревне. Его бригада известна качеством работы.',
+    highlights: ['Прораб'],
+    childrenIds: ['p14', 'p15'],
+  ),
+  FamilyMember(
+    id: 'p8',
+    fullName: 'Гузель Ринатовна Закирова',
+    lifeSpan: '1976–',
+    role: 'Повар',
+    story: 'Гузель готовит лучший бешбармак в семье. На все праздники она главный повар.',
+    highlights: ['Мастер кулинарии'],
+    childrenIds: ['p16'],
+  ),
+  FamilyMember(
+    id: 'p9',
+    fullName: 'Айрат Ильдарович Кунафин',
     lifeSpan: '1978–',
-    role: 'Researcher',
-    story:
-        'Nina interviews distant cousins via video calls. She marks every conversation with tags '
-        'so future generations can find topics quickly.',
-    highlights: ['Metadata expert'],
+    role: 'Фермер',
+    story: 'Айрат продолжает дело отца. У него большое хозяйство: коровы, овцы, куры.',
+    highlights: ['Фермерское хозяйство'],
+    childrenIds: ['p17', 'p18'],
   ),
   FamilyMember(
-    id: 'olga',
-    fullName: 'Olga Kuznetsova',
+    id: 'p10',
+    fullName: 'Лилия Ильдаровна Ахметова',
     lifeSpan: '1982–',
-    role: 'Documentary photographer',
-    story:
-        'Olga combines film photography with oral history. Her series "Homes of the Zhezhirs" '
-        'sparked the idea for this mobile app.',
-    highlights: ['Shoots on 35mm and instant film'],
-    childrenIds: ['tim'],
+    role: 'Медсестра',
+    story: 'Лилия работает в детской поликлинике. Дети её обожают за доброту.',
+    highlights: ['Любит детей'],
+    childrenIds: ['p19', 'p20'],
+  ),
+
+  // === ДЕТИ (10 человек) ===
+  FamilyMember(
+    id: 'p11',
+    fullName: 'Эльвира Маратовна Кунафина',
+    lifeSpan: '1995–',
+    role: 'Программист',
+    story: 'Эльвира работает в IT-компании и создаёт мобильные приложения.',
+    highlights: ['Flutter-разработчик'],
   ),
   FamilyMember(
-    id: 'mira',
-    fullName: 'Mira Zhezhir',
+    id: 'p12',
+    fullName: 'Ринат Маратович Кунафин',
+    lifeSpan: '1998–',
+    role: 'Студент',
+    story: 'Ринат учится в медицинском университете, мечтает стать хирургом.',
+    highlights: ['Будущий врач'],
+  ),
+  FamilyMember(
+    id: 'p13',
+    fullName: 'Камиля Алиевна Хасанова',
+    lifeSpan: '1999–',
+    role: 'Дизайнер',
+    story: 'Камиля занимается графическим дизайном и рисует портреты родственников.',
+    highlights: ['Художница'],
+  ),
+  FamilyMember(
+    id: 'p14',
+    fullName: 'Артур Тимурович Галимов',
+    lifeSpan: '1997–',
+    role: 'Водитель',
+    story: 'Артур работает дальнобойщиком и объездил всю страну.',
+    highlights: ['Путешественник'],
+  ),
+  FamilyMember(
+    id: 'p15',
+    fullName: 'Диана Тимуровна Галимова',
+    lifeSpan: '2000–',
+    role: 'Студентка',
+    story: 'Диана изучает юриспруденцию и хочет стать адвокатом.',
+    highlights: ['Юрист'],
+  ),
+  FamilyMember(
+    id: 'p16',
+    fullName: 'Данил Русланович Закиров',
     lifeSpan: '2001–',
-    role: 'Product designer',
-    story:
-        'Mira sketches every prototype inside this project. She pushes for playful interactions '
-        'so that the family tree feels alive.',
-    highlights: ['Lead designer for the app'],
+    role: 'Блогер',
+    story: 'Данил ведёт блог о татарской кухне и снимает рецепты бабушки.',
+    highlights: ['100к подписчиков'],
   ),
   FamilyMember(
-    id: 'tim',
-    fullName: 'Tim Yashin',
-    lifeSpan: '2008–',
-    role: 'Junior researcher',
-    story:
-        'Tim is obsessed with drones and records aerial videos of each family hometown. '
-        'He annotates every clip with facts that Olga collects.',
-    highlights: ['Drone pilot', 'Future data scientist'],
+    id: 'p17',
+    fullName: 'Азат Айратович Кунафин',
+    lifeSpan: '2003–',
+    role: 'Школьник',
+    story: 'Азат помогает отцу на ферме и мечтает о своём тракторе.',
+    highlights: ['Помощник фермера'],
+  ),
+  FamilyMember(
+    id: 'p18',
+    fullName: 'Аделина Айратовна Кунафина',
+    lifeSpan: '2007–',
+    role: 'Школьница',
+    story: 'Аделина любит лошадей и занимается конным спортом.',
+    highlights: ['Наездница'],
+  ),
+  FamilyMember(
+    id: 'p19',
+    fullName: 'Амир Рустамович Ахметов',
+    lifeSpan: '2010–',
+    role: 'Школьник',
+    story: 'Амир увлекается роботехникой и участвует в олимпиадах.',
+    highlights: ['Юный изобретатель'],
+  ),
+  FamilyMember(
+    id: 'p20',
+    fullName: 'Самира Рустамовна Ахметова',
+    lifeSpan: '2015–',
+    role: 'Ребёнок',
+    story: 'Самира — самая младшая в семье. Любит рисовать и петь.',
+    highlights: ['Самая младшая'],
   ),
 ];

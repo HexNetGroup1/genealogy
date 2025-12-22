@@ -137,7 +137,7 @@ class _BranchNodeState extends State<BranchNode> {
                         dense: true,
                         leading: const Icon(Icons.person_2_outlined),
                         title: Text(
-                          person.fullName,
+                          person.displayName,
                           overflow: TextOverflow.ellipsis,
                         ),
                         onTap: () =>
@@ -164,14 +164,18 @@ class _BranchNodeState extends State<BranchNode> {
   }
 
   FamilyMember _mapPerson(Person person) {
-    final fullName = person.fullName;
+    final fullName = person.displayName;
+    final birthYear = person.birthYear?.toString() ?? '????';
+    final deathYear = person.deathYear?.toString() ?? '...';
+    final lifeSpan = '$birthYear – $deathYear';
+    
     return FamilyMember(
       id: 'person-${person.id}',
       fullName: fullName,
-      lifeSpan: '???? – ...',
+      lifeSpan: lifeSpan,
       role: 'Участник рода',
-      story: person.description?.isNotEmpty == true
-          ? person.description!
+      story: person.path?.isNotEmpty == true
+          ? person.path!
           : 'История появится позже.',
       highlights: const [],
     );

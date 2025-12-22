@@ -1,35 +1,19 @@
 import 'package:flutter/material.dart';
 
 import 'data/sample_family.dart';
-import 'data/supabase_genealogy_repository.dart';
 import 'models/family_member.dart';
-import 'widgets/branch_tree_explorer.dart';
+import 'widgets/book_library.dart';
 import 'widgets/family_tree_view.dart';
 
-class HomeTabsScreen extends StatefulWidget {
-  const HomeTabsScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<HomeTabsScreen> createState() => _HomeTabsScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeTabsScreenState extends State<HomeTabsScreen> {
+class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  late final SupabaseGenealogyRepository _repository;
-  late Future<List<FamilyMember>> _membersFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _repository = SupabaseGenealogyRepository();
-    _membersFuture = _repository.fetchFamilyMembers();
-  }
-
-  void _reloadMembers() {
-    setState(() {
-      _membersFuture = _repository.fetchFamilyMembers();
-    });
-  }
 
   void _openStory(FamilyMember member) {
     showModalBottomSheet<void>(
@@ -45,207 +29,128 @@ class _HomeTabsScreenState extends State<HomeTabsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: FutureBuilder<List<FamilyMember>>(
-          future: _membersFuture,
-          builder: (context, snapshot) {
-            final members = snapshot.data;
-            final isLoading =
-                snapshot.connectionState == ConnectionState.waiting;
-            final error = snapshot.hasError ? snapshot.error : null;
-            return IndexedStack(
-              index: _currentIndex,
-              children: [
-                FamilyTreeTab(
-                  onMemberSelected: _openStory,
-                  members: members,
-                  isLoading: isLoading,
-                  error: error,
-                  onRetry: _reloadMembers,
-                ),
-                StoriesTab(
-                  onMemberSelected: _openStory,
-                  members: members,
-                  isLoading: isLoading,
-                  error: error,
-                  onRetry: _reloadMembers,
-                ),
-                const ResearchTab(),
-                const MemoriesTab(),
-                const ProfileTab(),
-              ],
-            );
-          },
+        child: IndexedStack(
+          index: _currentIndex,
+          children: [
+            // Дерево — используем тестовые данные
+            FamilyTreeView(
+              members: sampleFamily,
+              onMemberSelected: _openStory,
+            ),
+            const BookLibrary(),
+            const ProfileTab(),
+          ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.account_tree_outlined),
-            label: 'Tree',
+      extendBody: true,
+      bottomNavigationBar: ClipRRect(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(180),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(10),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            label: 'Stories',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.troubleshoot_outlined),
-            label: 'Research',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.auto_awesome_mosaic),
-            label: 'Memories',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            label: 'Profile',
-          ),
-        ],
-        onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-      ),
-    );
-  }
-}
-
-class FamilyTreeTab extends StatelessWidget {
-  const FamilyTreeTab({
-    super.key,
-    required this.onMemberSelected,
-    required this.members,
-    required this.isLoading,
-    required this.error,
-    required this.onRetry,
-  });
-
-  final ValueChanged<FamilyMember> onMemberSelected;
-  final List<FamilyMember>? members;
-  final bool isLoading;
-  final Object? error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _TabHeader(
-            title: 'Family tree',
-            subtitle:
-                'Pinch to zoom the tree, либо изучай ветви через список ниже.',
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: TabBar(
-              labelColor: colorScheme.primary,
-              unselectedLabelColor: colorScheme.onSurfaceVariant,
-              indicatorColor: colorScheme.primary,
-              tabs: const [
-                Tab(text: 'Интерактивный вид'),
-                Tab(text: 'Список ветвей'),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(32),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(32),
-                      child: _TreeContainer(
-                        members: members,
-                        onMemberSelected: onMemberSelected,
-                        isLoading: isLoading,
-                        error: error,
-                        onRetry: onRetry,
-                      ),
-                    ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _NavItem(
+                    icon: Icons.account_tree_outlined,
+                    selectedIcon: Icons.account_tree,
+                    label: 'Древо',
+                    isSelected: _currentIndex == 0,
+                    onTap: () => setState(() => _currentIndex = 0),
                   ),
-                ),
-                BranchTreeExplorer(
-                  onPersonSelected: onMemberSelected,
-                ),
-              ],
+                  _NavItem(
+                    icon: Icons.menu_book_outlined,
+                    selectedIcon: Icons.menu_book,
+                    label: 'Книга',
+                    isSelected: _currentIndex == 1,
+                    onTap: () => setState(() => _currentIndex = 1),
+                  ),
+                  _NavItem(
+                    icon: Icons.person_outline,
+                    selectedIcon: Icons.person,
+                    label: 'Профиль',
+                    isSelected: _currentIndex == 2,
+                    onTap: () => setState(() => _currentIndex = 2),
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class StoriesTab extends StatelessWidget {
-  const StoriesTab({
-    super.key,
-    required this.onMemberSelected,
-    required this.members,
-    required this.isLoading,
-    required this.error,
-    required this.onRetry,
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
   });
 
-  final ValueChanged<FamilyMember> onMemberSelected;
-  final List<FamilyMember>? members;
-  final bool isLoading;
-  final Object? error;
-  final VoidCallback onRetry;
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  static const Color _primaryGreen = Color(0xFF2E7D32);
 
   @override
   Widget build(BuildContext context) {
-    final resolvedMembers = (members != null && members!.isNotEmpty)
-        ? members!
-        : sampleFamily;
-    final usingDemo = (members == null || members!.isEmpty) && !isLoading;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _TabHeader(
-          title: 'Stories',
-          subtitle: 'Finish drafts and mark which clips should sync to Supabase.',
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 20 : 16,
+          vertical: 10,
         ),
-        if (isLoading)
-          const LinearProgressIndicator(minHeight: 2)
-        else if (error != null)
-          _InlineErrorBanner(
-            message: 'Не удалось загрузить истории: $error',
-            onRetry: onRetry,
-          )
-        else if (usingDemo)
-          const _InlineInfoBanner(
-            message:
-                'В Supabase пока нет историй, поэтому показаны демонстрационные данные.',
-          ),
-        Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-            itemBuilder: (context, index) {
-              final member = resolvedMembers[index];
-              return _StoryCard(
-                member: member,
-                onTap: () => onMemberSelected(member),
-              );
-            },
-            separatorBuilder: (_, index) => const SizedBox(height: 16),
-            itemCount: resolvedMembers.length,
-          ),
+        decoration: BoxDecoration(
+          color: isSelected ? _primaryGreen.withAlpha(25) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
         ),
-      ],
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? selectedIcon : icon,
+              color: isSelected ? _primaryGreen : Colors.grey[600],
+              size: 24,
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: _primaryGreen,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
+
 
 class _TreeContainer extends StatelessWidget {
   const _TreeContainer({
@@ -318,107 +223,63 @@ class _TreeContainer extends StatelessWidget {
   }
 }
 
-class _CenteredError extends StatelessWidget {
-  const _CenteredError({
-    required this.message,
-    required this.onRetry,
-    this.isInfo = false,
-  });
-
-  final String message;
-  final VoidCallback onRetry;
-  final bool isInfo;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isInfo ? Icons.info_outline : Icons.warning_amber_rounded,
-            color: isInfo ? colorScheme.primary : colorScheme.error,
-            size: 40,
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              message,
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Обновить'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InlineErrorBanner extends StatelessWidget {
-  const _InlineErrorBanner({
-    required this.message,
+class StoriesTab extends StatelessWidget {
+  const StoriesTab({
+    super.key,
+    required this.onMemberSelected,
+    required this.members,
+    required this.isLoading,
+    required this.error,
     required this.onRetry,
   });
 
-  final String message;
+  final ValueChanged<FamilyMember> onMemberSelected;
+  final List<FamilyMember>? members;
+  final bool isLoading;
+  final Object? error;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: colorScheme.errorContainer,
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.warning_amber_rounded, color: colorScheme.error),
-          const SizedBox(width: 12),
-          Expanded(child: Text(message)),
-          TextButton(
-            onPressed: onRetry,
-            child: const Text('Повторить'),
+    final resolvedMembers = (members != null && members!.isNotEmpty)
+        ? members!
+        : sampleFamily;
+    final usingDemo = (members == null || members!.isEmpty) && !isLoading;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _TabHeader(
+          title: 'Stories',
+          subtitle: 'Finish drafts and mark which clips should sync to Supabase.',
+        ),
+        if (isLoading)
+          const LinearProgressIndicator(minHeight: 2)
+        else if (error != null)
+          _InlineErrorBanner(
+            message: 'Не удалось загрузить истории: $error',
+            onRetry: onRetry,
+          )
+        else if (usingDemo)
+          const _InlineInfoBanner(
+            message:
+                'В Supabase пока нет историй, поэтому показаны демонстрационные данные.',
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InlineInfoBanner extends StatelessWidget {
-  const _InlineInfoBanner({
-    required this.message,
-  });
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: colorScheme.secondaryContainer,
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, color: colorScheme.onSecondaryContainer),
-          const SizedBox(width: 12),
-          Expanded(child: Text(message)),
-        ],
-      ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+            itemBuilder: (context, index) {
+              final member = resolvedMembers[index];
+              return _StoryCard(
+                member: member,
+                onTap: () => onMemberSelected(member),
+              );
+            },
+            separatorBuilder: (_, index) => const SizedBox(height: 16),
+            itemCount: resolvedMembers.length,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -465,21 +326,198 @@ class MemoriesTab extends StatelessWidget {
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
 
+  static const Color _primaryGreen = Color(0xFF2E7D32);
+
   @override
   Widget build(BuildContext context) {
-    return const _PlaceholderTab(
-      title: 'Curator profile',
-      description:
-          'Switch between your curator profile and the public timeline that other relatives will see.',
-      highlights: [
-        'Personal goals',
-        'Notifications',
-        'Supabase connection status',
+    final theme = Theme.of(context);
+    
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Аватар и email
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _primaryGreen.withAlpha(20),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: _primaryGreen,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.person,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Пользователь',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'user@example.com',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: () {},
+                color: _primaryGreen,
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Настройки
+        Text(
+          'Настройки',
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _SettingsItem(
+          icon: Icons.notifications_outlined,
+          title: 'Уведомления',
+          onTap: () {},
+        ),
+        _SettingsItem(
+          icon: Icons.language_outlined,
+          title: 'Язык',
+          subtitle: 'Русский',
+          onTap: () {},
+        ),
+        _SettingsItem(
+          icon: Icons.dark_mode_outlined,
+          title: 'Тёмная тема',
+          trailing: Switch(
+            value: false,
+            onChanged: (v) {},
+            activeColor: _primaryGreen,
+          ),
+          onTap: () {},
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Документы
+        Text(
+          'Документы',
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _SettingsItem(
+          icon: Icons.description_outlined,
+          title: 'Политика конфиденциальности',
+          onTap: () {},
+        ),
+        _SettingsItem(
+          icon: Icons.article_outlined,
+          title: 'Пользовательское соглашение',
+          onTap: () {},
+        ),
+        _SettingsItem(
+          icon: Icons.help_outline,
+          title: 'Справка и поддержка',
+          onTap: () {},
+        ),
+        _SettingsItem(
+          icon: Icons.info_outline,
+          title: 'О приложении',
+          subtitle: 'Версия 1.0.0',
+          onTap: () {},
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Выход
+        _SettingsItem(
+          icon: Icons.logout,
+          title: 'Выйти из аккаунта',
+          iconColor: Colors.red,
+          titleColor: Colors.red,
+          onTap: () {},
+        ),
+        
+        const SizedBox(height: 32),
       ],
-      icon: Icons.person_outline,
     );
   }
 }
+
+class _SettingsItem extends StatelessWidget {
+  const _SettingsItem({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.iconColor,
+    this.titleColor,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final Color? iconColor;
+  final Color? titleColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: iconColor ?? Colors.grey[700]),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: titleColor,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        subtitle: subtitle != null ? Text(subtitle!) : null,
+        trailing: trailing ?? const Icon(Icons.chevron_right, color: Colors.grey),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+}
+
+// Helpers
 
 class _PlaceholderTab extends StatelessWidget {
   const _PlaceholderTab({
@@ -625,6 +663,142 @@ class _StoryCard extends StatelessWidget {
   }
 }
 
+class _TabHeader extends StatelessWidget {
+  const _TabHeader({
+    required this.title,
+    required this.subtitle,
+  });
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineErrorBanner extends StatelessWidget {
+  const _InlineErrorBanner({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: colorScheme.errorContainer,
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: colorScheme.error),
+          const SizedBox(width: 12),
+          Expanded(child: Text(message)),
+          TextButton(
+            onPressed: onRetry,
+            child: const Text('Повторить'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineInfoBanner extends StatelessWidget {
+  const _InlineInfoBanner({
+    required this.message,
+  });
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: colorScheme.secondaryContainer,
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: colorScheme.onSecondaryContainer),
+          const SizedBox(width: 12),
+          Expanded(child: Text(message)),
+        ],
+      ),
+    );
+  }
+}
+
+class _CenteredError extends StatelessWidget {
+  const _CenteredError({
+    required this.message,
+    required this.onRetry,
+    this.isInfo = false,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final bool isInfo;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isInfo ? Icons.info_outline : Icons.warning_amber_rounded,
+            color: isInfo ? colorScheme.primary : colorScheme.error,
+            size: 40,
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Обновить'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MemberStorySheet extends StatelessWidget {
   const _MemberStorySheet({
     required this.member,
@@ -700,37 +874,6 @@ class _MemberStorySheet extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _TabHeader extends StatelessWidget {
-  const _TabHeader({
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
     );
   }
 }

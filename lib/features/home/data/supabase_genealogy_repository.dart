@@ -13,18 +13,22 @@ class SupabaseGenealogyRepository {
 
   Future<List<Person>> _fetchPersons() async {
     final List<dynamic> rows = await _client
-        .from('persons')
+        .from('people')
         .select(
           '''
           id,
-          branch_id,
-          last_name,
-          first_name,
-          middle_name,
-          birth_date,
-          death_date,
-          photo,
-          description,
+          name,
+          parent_id,
+          birth_year,
+          death_year,
+          image,
+          author,
+          depth,
+          path,
+          meta_status,
+          locked,
+          orderby,
+          children_count,
           created_at,
           updated_at
           ''',
@@ -33,86 +37,56 @@ class SupabaseGenealogyRepository {
     return rows.map((row) => Person.fromJson(row as Map<String, dynamic>)).toList();
   }
 
-  Future<List<Branch>> _fetchBranches() async {
-    final List<dynamic> rows = await _client
-        .from('branches')
-        .select(
-          '''
-          id,
-          parent_id,
-          name,
-          type,
-          description,
-          icon_url,
-          order_index,
-          created_at,
-          updated_at
-          ''',
-        )
-        .order('order_index');
-    return rows.map((row) => Branch.fromJson(row as Map<String, dynamic>)).toList();
-  }
 
   Future<List<FamilyMember>> fetchFamilyMembers() async {
     final persons = await _fetchPersons();
-    final branches = await _fetchBranches();
     if (persons.isEmpty) return [];
 
-    final branchById = {
-      for (final branch in branches) branch.id: branch,
+    // Build parent-child relationships
+    final personById = {
+      for (final person in persons) person.id: person,
     };
-    final branchChildren = <int, List<int>>{};
-    for (final branch in branches) {
-      final parentId = branch.parentId;
-      if (parentId == null) continue;
-      branchChildren.putIfAbsent(parentId, () => []).add(branch.id);
+    
+    final childrenByParentId = <String, List<String>>{};
+    for (final person in persons) {
+      if (person.parentId != null) {
+        childrenByParentId
+            .putIfAbsent(person.parentId!, () => [])
+            .add(person.id);
+      }
     }
 
-    final branchPersonIds = <int, List<String>>{};
+    // Convert to FamilyMember
     final members = <String, FamilyMember>{};
-
     for (final person in persons) {
-      final branch = branchById[person.branchId];
-      final member = _mapPersonToFamilyMember(person, branch);
+      final member = _mapPersonToFamilyMember(person);
       members[member.id] = member;
-      branchPersonIds.putIfAbsent(person.branchId, () => []).add(member.id);
     }
 
-    final childrenByMember = <String, List<String>>{
-      for (final member in members.values) member.id: [],
-    };
-
-    for (final person in persons) {
-      final childBranchIds = branchChildren[person.branchId] ?? const [];
-      final childMemberIds = <String>[];
-      for (final childBranchId in childBranchIds) {
-        childMemberIds.addAll(branchPersonIds[childBranchId] ?? const []);
-      }
-      if (childMemberIds.isNotEmpty) {
-        childrenByMember['person-${person.id}'] = childMemberIds;
-      }
-    }
-
+    // Assign children to each member
     return members.values
         .map(
-          (member) => member.copyWith(
-            childrenIds: childrenByMember[member.id] ?? const [],
-          ),
+          (member) {
+            final personId = member.id.replaceFirst('person-', '');
+            final childIds = (childrenByParentId[personId] ?? [])
+                .map((id) => 'person-$id')
+                .toList();
+            return member.copyWith(childrenIds: childIds);
+          },
         )
         .toList();
   }
 
-  FamilyMember _mapPersonToFamilyMember(Person person, Branch? branch) {
+
+  FamilyMember _mapPersonToFamilyMember(Person person) {
     final fullName = person.displayName;
-    final role = branch?.name ?? 'Relative';
+    final role = 'Потомок';  // Relative/Descendant
     final highlights = <String>[
-      if (branch != null) branch.type,
-      if (branch?.description?.isNotEmpty == true) branch!.description!,
+      if (person.author != null) 'Автор: ${person.author}',
+      if (person.depth != null) 'Уровень: ${person.depth}',
     ];
     final lifeSpan = _formatLifeSpan(person.birthDate, person.deathDate);
-    final story = (person.description?.trim().isNotEmpty ?? false)
-        ? person.description!.trim()
-        : 'Пока нет истории. Добавь её из Supabase.';
+    final story = person.path ?? 'Информация в разработке';
 
     return FamilyMember(
       id: 'person-${person.id}',
