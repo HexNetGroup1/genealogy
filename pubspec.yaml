@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
   flutter_fancy_tree_view: ^1.6.0
   graphview: ^1.2.4
+  page_flip: ^0.2.5+1
+  page_flip_builder: ^0.1.4
   supabase_flutter: ^2.5.4
 
 dev_dependencies:

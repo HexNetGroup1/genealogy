@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
+import 'package:page_flip/page_flip.dart';
 import 'dart:ui';
 
-/// Просмотрщик книги с 3D анимацией перелистывания.
+/// Просмотрщик книги с эффектом реального перелистывания
 class BookViewer extends StatefulWidget {
   const BookViewer({super.key});
 
@@ -11,29 +11,9 @@ class BookViewer extends StatefulWidget {
 }
 
 class _BookViewerState extends State<BookViewer> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
+  final _controller = GlobalKey<PageFlipWidgetState>();
   static const int _totalPages = 534;
   bool _showControls = true;
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _goToPage(int page) {
-    if (page >= 0 && page < _totalPages) {
-      _pageController.animateToPage(
-        page,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
-      );
-    }
-  }
-
-  void _previousPage() => _goToPage(_currentPage - 1);
-  void _nextPage() => _goToPage(_currentPage + 1);
 
   String _getAssetPath(int pageIndex) {
     final pageNumber = (pageIndex + 1).toString().padLeft(4, '0');
@@ -50,57 +30,46 @@ class _BookViewerState extends State<BookViewer> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Книга (Swipe only)
+          // 1. Книга с эффектом перелистывания
           GestureDetector(
             onTap: _toggleControls,
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: _totalPages,
-              onPageChanged: (page) => setState(() => _currentPage = page),
-              itemBuilder: (context, index) {
-                // Возвращаем стиль книги, но без 3D вращения (прямые страницы)
-                // Используем стандартный слайд PageView
-                return InteractiveViewer(
-                  minScale: 1.0,
-                  maxScale: 4.0,
-                  child: Center(
-                    child: Hero(
-                      tag: 'book_page_$index',
-                      child: Container(
-                        // Убраны отступы и тени для полного экрана
-                        margin: EdgeInsets.zero,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                        ),
-                        child: Image.asset(
-                          _getAssetPath(index),
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Center(child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey)),
-                        ),
+            child: PageFlipWidget(
+              key: _controller,
+              backgroundColor: const Color(0xFFF0EFEF),
+              isRightSwipe: false,
+              lastPage: Container(
+                color: Colors.white, 
+                child: const Center(child: Text('Конец книги', style: TextStyle(fontSize: 20))),
+              ),
+              children: <Widget>[
+                for (var i = 0; i < _totalPages; i++)
+                  Container(
+                    color: Colors.white,
+                    child: Center(
+                      child: Image.asset(
+                        _getAssetPath(i),
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Center(child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey)),
                       ),
                     ),
                   ),
-                );
-              },
+              ],
             ),
           ),
 
-          // 2. Верхняя панель (Header) - оставляем для информации
+          // 2. Верхняя панель (Header)
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             top: _showControls ? 0 : -100,
             left: 0,
             right: 0,
-            child: _GlassHeader(
+            child: const _GlassHeader(
               title: 'Семейная книга',
-              subtitle: 'Страница ${_currentPage + 1} из $_totalPages',
+              subtitle: 'Том 1',
             ),
           ),
-          
-          // Нижняя панель удалена по запросу.
-          // Листание только через Swipe (руками).
         ],
       ),
     );
