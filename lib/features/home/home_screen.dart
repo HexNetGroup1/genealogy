@@ -65,14 +65,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   _NavItem(
                     icon: Icons.account_tree_outlined,
                     selectedIcon: Icons.account_tree,
-                    label: 'Древо',
+                    label: 'Шежіре',
                     isSelected: _currentIndex == 0,
                     onTap: () => setState(() => _currentIndex = 0),
                   ),
                   _NavItem(
                     icon: Icons.menu_book_outlined,
                     selectedIcon: Icons.menu_book,
-                    label: 'Книга',
+                    label: 'Кітап',
                     isSelected: _currentIndex == 1,
                     onTap: () => setState(() => _currentIndex = 1),
                   ),
@@ -407,16 +407,6 @@ class ProfileTab extends StatelessWidget {
           icon: Icons.language_outlined,
           title: 'Язык',
           subtitle: 'Русский',
-          onTap: () {},
-        ),
-        _SettingsItem(
-          icon: Icons.dark_mode_outlined,
-          title: 'Тёмная тема',
-          trailing: Switch(
-            value: false,
-            onChanged: (v) {},
-            activeColor: _primaryGreen,
-          ),
           onTap: () {},
         ),
         
