@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:page_flip/page_flip.dart';
 import 'dart:ui';
 
-/// Просмотрщик книги с эффектом реального перелистывания
+/// Просмотрщик книги с простым свайпом
 class BookViewer extends StatefulWidget {
   const BookViewer({super.key});
 
@@ -11,11 +10,12 @@ class BookViewer extends StatefulWidget {
   State<BookViewer> createState() => _BookViewerState();
 }
 
-class _BookViewerState extends State<BookViewer> {
-  final _controller = GlobalKey<PageFlipWidgetState>();
+class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
+  // final _pageController = PageController(); // Removed
   static const int _totalPages = 534;
   bool _showControls = true;
   Timer? _hideTimer;
+  int _currentPage = 0;
 
   @override
   void initState() {
@@ -26,6 +26,7 @@ class _BookViewerState extends State<BookViewer> {
   @override
   void dispose() {
     _hideTimer?.cancel();
+    _animationController?.dispose();
     super.dispose();
   }
 
@@ -51,42 +52,196 @@ class _BookViewerState extends State<BookViewer> {
     return Scaffold(
       backgroundColor: const Color(0xFFF0EFEF),
       extendBodyBehindAppBar: true,
-      body: Stack(
+      body: GestureDetector(
+        onHorizontalDragUpdate: _handleDragUpdate,
+        onHorizontalDragEnd: _handleDragEnd,
+        // Block swipes during animation to keep it simple, or handle interruptions
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Base Layer (The page underneath)
+            // If dragging LEFT (showing next page): Base is _currentPage + 1
+            // If dragging RIGHT (showing prev page): Base is _currentPage
+            // If idle: Base is _currentPage
+            if (_dragOffset < 0) ...[
+               // Dragging Left -> Next Page is bottom
+               _buildPageContent(_currentPage + 1),
+               // Active Page (Current) is Top and flipping away
+               _buildTransformingPage(
+                 pageIndex: _currentPage,
+                 percent: _dragOffset, // -0.0 to -1.0
+                 isRightPage: true, // It is the page on the "Right" (visible) stack
+               ),
+            ] else if (_dragOffset > 0) ...[
+               // Dragging Right -> Current Page is bottom
+               _buildPageContent(_currentPage),
+               // Prev Page is Top and flipping in
+               _buildTransformingPage(
+                 pageIndex: _currentPage - 1,
+                 percent: _dragOffset - 1.0, // Maps 0..1 to -1..0 (logic: -1 is open, 0 is closed)
+                 // Wait.
+                 // Ideally: 
+                 // Prev page starts at -90deg (or -180).
+                 // We drag it to 0.
+                 // My percent logic: 0 is flat. 
+                 // Let's standardize:
+                 // 0 = Flat Visible.
+                 // -1 = Flipped Left (Invisible/Vertical).
+                 
+                 // Drag Right (0 -> 1):
+                 // We want Prev Page to go from -1 (Left/Vertical) to 0 (Flat).
+                 // So we pass ( _dragOffset - 1.0 ) which goes from -1.0 to 0.0.
+                 isRightPage: true, 
+               ),
+            ] else ...[
+               // Idle
+               _buildPageContent(_currentPage),
+            ],
+
+            // Header
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              top: _showControls ? 0 : -100,
+              left: 0,
+              right: 0,
+              child: _GlassHeader(
+                title: 'Семейная книга',
+                subtitle: 'Страница ${_currentPage + 1} из $_totalPages',
+                onBookmarkTap: () {},
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- Logic ---
+  double _dragOffset = 0.0; // -1.0 to 1.0
+  AnimationController? _animationController;
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    if (_animationController?.isAnimating ?? false) return;
+
+    final double delta = details.primaryDelta! / MediaQuery.of(context).size.width;
+    setState(() {
+      _dragOffset += delta;
+      // Clamp logic:
+      // Can't go Prev if page 0.
+      if (_currentPage == 0 && _dragOffset > 0) _dragOffset = 0;
+      // Can't go Next if page max.
+      if (_currentPage == _totalPages - 1 && _dragOffset < 0) _dragOffset = 0;
+      
+      _dragOffset = _dragOffset.clamp(-1.0, 1.0);
+    });
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    if (_dragOffset == 0) return;
+
+    // Decide whether to finish flip or cancel
+    // Threshold 0.3 or velocity
+    final velocity = details.primaryVelocity! / MediaQuery.of(context).size.width;
+    bool finish = false;
+    
+    if (_dragOffset < 0) {
+      // Trying to go Next
+      if (_dragOffset < -0.3 || velocity < -0.5) finish = true;
+    } else {
+      // Trying to go Prev
+      if (_dragOffset > 0.3 || velocity > 0.5) finish = true;
+    }
+
+    double target = finish ? (_dragOffset < 0 ? -1.0 : 1.0) : 0.0;
+    
+    _animationController = AnimationController(
+       vsync: this, 
+       duration: const Duration(milliseconds: 300)
+    );
+    
+    final animation = Tween<double>(begin: _dragOffset, end: target).animate(
+       CurvedAnimation(parent: _animationController!, curve: Curves.easeOut)
+    );
+
+    animation.addListener(() {
+      setState(() {
+        _dragOffset = animation.value;
+      });
+    });
+
+    animation.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        if (target == -1.0) {
+           _finishChangePage(_currentPage + 1);
+        } else if (target == 1.0) {
+           _finishChangePage(_currentPage - 1);
+        } else {
+           setState(() => _dragOffset = 0.0);
+        }
+        _animationController?.dispose();
+        _animationController = null;
+      }
+    });
+
+    _animationController!.forward();
+  }
+
+  void _finishChangePage(int newPage) {
+    setState(() {
+      _currentPage = newPage;
+      _dragOffset = 0.0;
+    });
+  }
+
+  Widget _buildPageContent(int index) {
+    if (index < 0 || index >= _totalPages) return const SizedBox.shrink();
+    return _BookPage(
+      key: ValueKey(index),
+      assetPath: _getAssetPath(index),
+      onTap: _toggleControls,
+    );
+  }
+
+  Widget _buildTransformingPage({
+    required int pageIndex,
+    required double percent, // 0.0 to -1.0
+    required bool isRightPage,
+  }) {
+    // Rotation: 0 to -90 degrees
+    // We map 0..-1 to 0..-pi/2
+    final double angle = percent * 1.5708; 
+    
+    // Shadow opacity
+    // 0 -> 0
+    // -1 -> 0.5 (Darkest when vertical)
+    final double shadowOpacity = (percent.abs() * 0.5).clamp(0.0, 0.5);
+
+    return Transform(
+      transform: Matrix4.identity()
+        ..setEntry(3, 2, 0.001) // perspective
+        ..rotateY(angle),
+      alignment: Alignment.centerLeft, // Spine
+      child: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Книга с эффектом перелистывания
-          PageFlipWidget(
-            key: _controller,
-            backgroundColor: const Color(0xFFF0EFEF),
-            isRightSwipe: false,
-            lastPage: Container(
-              color: Colors.white, 
-              child: const Center(child: Text('Конец книги', style: TextStyle(fontSize: 20))),
-            ),
-            children: <Widget>[
-              for (var i = 0; i < _totalPages; i++)
-                _BookPage(
-                  assetPath: _getAssetPath(i),
-                  onTap: _toggleControls,
-                ),
-            ],
-          ),
-
-          // 2. Верхняя панель (Header)
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            top: _showControls ? 0 : -100,
-            left: 0,
-            right: 0,
-            child: _GlassHeader(
-              title: 'Семейная книга',
-              subtitle: 'Том 1',
-              onBookmarkTap: () {
-                // TODO: Добавить логику закладки
-              },
-            ),
-          ),
+          _buildPageContent(pageIndex),
+          // Gradient Shadow overlay
+           IgnorePointer(
+             child: Container(
+               decoration: BoxDecoration(
+                 gradient: LinearGradient(
+                   begin: Alignment.centerRight,
+                   end: Alignment.centerLeft,
+                   colors: [
+                     Colors.black.withOpacity(0.0),
+                     Colors.black.withOpacity(shadowOpacity),
+                   ],
+                   stops: const [0.5, 1.0],
+                 ),
+               ),
+             ),
+           ),
         ],
       ),
     );
@@ -122,7 +277,6 @@ class _GlassHeader extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Кнопка назад
                 Positioned(
                   left: 0,
                   top: 0,
@@ -133,7 +287,6 @@ class _GlassHeader extends StatelessWidget {
                     color: Colors.black87,
                   ),
                 ),
-                // Кнопка закладки
                 Positioned(
                   right: 0,
                   top: 0,
@@ -144,7 +297,6 @@ class _GlassHeader extends StatelessWidget {
                     color: Colors.black87,
                   ),
                 ),
-                // Заголовок
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -177,7 +329,7 @@ class _GlassHeader extends StatelessWidget {
 
 /// Виджет страницы книги с автоопределением ориентации
 class _BookPage extends StatefulWidget {
-  const _BookPage({required this.assetPath, required this.onTap});
+  const _BookPage({super.key, required this.assetPath, required this.onTap});
 
   final String assetPath;
   final VoidCallback onTap;
@@ -240,7 +392,7 @@ class _BookPageState extends State<_BookPage> {
           maxScale: 4.0,
           child: Center(
             child: RotatedBox(
-              quarterTurns: isHorizontal ? -1 : 0, // Поворот на -90° для горизонтальных
+              quarterTurns: isHorizontal ? -1 : 0,
               child: Image.asset(
                 widget.assetPath,
                 fit: BoxFit.contain,
