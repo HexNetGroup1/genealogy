@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'dart:math' as math;
 
-/// Просмотрщик книги с простым свайпом
+/// Просмотрщик книги с реалистичной анимацией и навигацией
 class BookViewer extends StatefulWidget {
   const BookViewer({super.key});
 
@@ -11,9 +12,9 @@ class BookViewer extends StatefulWidget {
 }
 
 class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
-  // final _pageController = PageController(); // Removed
+  // Количество страниц. В реальном приложении может приходить извне
   static const int _totalPages = 534;
-  int _currentPage = 0;
+  
   bool _showControls = true;
   Timer? _hideTimer;
   int _currentPage = 0;
@@ -70,12 +71,13 @@ class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
 
   void _startHideTimer() {
     _hideTimer?.cancel();
-    _hideTimer = Timer(const Duration(seconds: 3), () {
+    _hideTimer = Timer(const Duration(seconds: 4), () {
       if (mounted) setState(() => _showControls = false);
     });
   }
 
   String _getAssetPath(int pageIndex) {
+    // Внимание: удостоверьтесь, что файлы называются page_0001.png, page_0002.png и т.д.
     final pageNumber = (pageIndex + 1).toString().padLeft(4, '0');
     return 'assets/book/page_$pageNumber.png';
   }
@@ -85,88 +87,31 @@ class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
     if (_showControls) _startHideTimer();
   }
 
+  // --- Navigation Logic ---
 
+  void _goToPage(int page) {
+    if (page < 0) page = 0;
+    if (page >= _totalPages) page = _totalPages - 1;
+    if (page == _currentPage) return;
 
-  void _goToPage(int pageIndex) {
-    if (pageIndex < 0 || pageIndex >= _totalPages) return;
-    _controller.currentState?.goToPage(pageIndex);
+    if (_animationController != null && _animationController!.isAnimating) return;
+
     setState(() {
-      _currentPage = pageIndex;
+      _currentPage = page;
+      _dragOffset = 0.0;
     });
+    // Сбросить таймер при взаимодействии
+    _startHideTimer(); 
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF0EFEF),
-      extendBodyBehindAppBar: true,
-      body: GestureDetector(
-        onHorizontalDragUpdate: _handleDragUpdate,
-        onHorizontalDragEnd: _handleDragEnd,
-        // Block swipes during animation to keep it simple, or handle interruptions
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Base Layer (The page underneath)
-            // If dragging LEFT (showing next page): Base is _currentPage + 1
-            // If dragging RIGHT (showing prev page): Base is _currentPage
-            // If idle: Base is _currentPage
-            if (_dragOffset < 0) ...[
-               // Dragging Left -> Next Page is bottom
-               _buildPageContent(_currentPage + 1),
-               // Active Page (Current) is Top and flipping away
-               _buildTransformingPage(
-                 pageIndex: _currentPage,
-                 percent: _dragOffset, // -0.0 to -1.0
-                 isRightPage: true, // It is the page on the "Right" (visible) stack
-               ),
-            ] else if (_dragOffset > 0) ...[
-               // Dragging Right -> Current Page is bottom
-               _buildPageContent(_currentPage),
-               // Prev Page is Top and flipping in
-               _buildTransformingPage(
-                 pageIndex: _currentPage - 1,
-                 percent: _dragOffset - 1.0, // Maps 0..1 to -1..0 (logic: -1 is open, 0 is closed)
-                 // Wait.
-                 // Ideally: 
-                 // Prev page starts at -90deg (or -180).
-                 // We drag it to 0.
-                 // My percent logic: 0 is flat. 
-                 // Let's standardize:
-                 // 0 = Flat Visible.
-                 // -1 = Flipped Left (Invisible/Vertical).
-                 
-                 // Drag Right (0 -> 1):
-                 // We want Prev Page to go from -1 (Left/Vertical) to 0 (Flat).
-                 // So we pass ( _dragOffset - 1.0 ) which goes from -1.0 to 0.0.
-                 isRightPage: true, 
-               ),
-            ] else ...[
-               // Idle
-               _buildPageContent(_currentPage),
-            ],
+  void _jumpForward() => _goToPage(_currentPage + 10);
+  void _jumpBackward() => _goToPage(_currentPage - 10);
+  void _nextPage() => _goToPage(_currentPage + 1);
+  void _prevPage() => _goToPage(_currentPage - 1);
 
-            // Header
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              top: _showControls ? 0 : -100,
-              left: 0,
-              right: 0,
-              child: _GlassHeader(
-                title: 'Семейная книга',
-                subtitle: 'Страница ${_currentPage + 1} из $_totalPages',
-                onBookmarkTap: () {},
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // --- Logic ---
-  double _dragOffset = 0.0; // -1.0 to 1.0
+  // --- Animation Logic ---
+  
+  double _dragOffset = 0.0; // -1.0 (Next Page fully open) to 1.0 (Prev Page fully open)
   AnimationController? _animationController;
 
   void _handleDragUpdate(DragUpdateDetails details) {
@@ -175,41 +120,44 @@ class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
     final double delta = details.primaryDelta! / MediaQuery.of(context).size.width;
     setState(() {
       _dragOffset += delta;
+      
       // Clamp logic:
-      // Can't go Prev if page 0.
+      // Нельзя листать назад с первой страницы
       if (_currentPage == 0 && _dragOffset > 0) _dragOffset = 0;
-      // Can't go Next if page max.
+      // Нельзя листать вперед с последней страницы
       if (_currentPage == _totalPages - 1 && _dragOffset < 0) _dragOffset = 0;
       
       _dragOffset = _dragOffset.clamp(-1.0, 1.0);
     });
+    // Отменяем скрытие контролов пока тянем
+    _hideTimer?.cancel();
   }
 
   void _handleDragEnd(DragEndDetails details) {
     if (_dragOffset == 0) return;
 
-    // Decide whether to finish flip or cancel
-    // Threshold 0.3 or velocity
+    // Решаем, завершить переворот или отменить
     final velocity = details.primaryVelocity! / MediaQuery.of(context).size.width;
     bool finish = false;
     
+    // Порог срабатывания (дистанция или скорость)
     if (_dragOffset < 0) {
-      // Trying to go Next
-      if (_dragOffset < -0.3 || velocity < -0.5) finish = true;
+      // Пытаемся листать вперед (Next)
+      if (_dragOffset < -0.35 || velocity < -0.5) finish = true;
     } else {
-      // Trying to go Prev
-      if (_dragOffset > 0.3 || velocity > 0.5) finish = true;
+      // Пытаемся листать назад (Prev)
+      if (_dragOffset > 0.35 || velocity > 0.5) finish = true;
     }
 
     double target = finish ? (_dragOffset < 0 ? -1.0 : 1.0) : 0.0;
     
     _animationController = AnimationController(
        vsync: this, 
-       duration: const Duration(milliseconds: 300)
+       duration: const Duration(milliseconds: 350)
     );
     
     final animation = Tween<double>(begin: _dragOffset, end: target).animate(
-       CurvedAnimation(parent: _animationController!, curve: Curves.easeOut)
+       CurvedAnimation(parent: _animationController!, curve: Curves.easeOutCubic)
     );
 
     animation.addListener(() {
@@ -229,6 +177,7 @@ class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
         }
         _animationController?.dispose();
         _animationController = null;
+        _startHideTimer();
       }
     });
 
@@ -242,6 +191,80 @@ class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
     });
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFE5E5E5), // Немного темнее для контраста с книгой
+      extendBodyBehindAppBar: true,
+      body: GestureDetector(
+        onHorizontalDragUpdate: _handleDragUpdate,
+        onHorizontalDragEnd: _handleDragEnd,
+        // Простой тап переключает контролы
+        onTap: _toggleControls,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // --- Book Rendering Logic ---
+            // Base Layer: Страница, которая "лежит снизу".
+            if (_dragOffset < 0) ...[
+               // Тянем влево -> Видим следующую страницу внизу
+               _buildPageContent(_currentPage + 1),
+               // Сверху текущая страница, которая переворачивается
+               _buildTransformingPage(
+                 pageIndex: _currentPage,
+                 percent: _dragOffset, // -0.0 -> -1.0
+                 isRightPage: true, // Это правая страница, уходящая влево
+               ),
+            ] else if (_dragOffset > 0) ...[
+               // Тянем вправо -> Видим текущую страницу внизу
+               _buildPageContent(_currentPage),
+               // Сверху предыдущая страница, которая возвращается
+               _buildTransformingPage(
+                 pageIndex: _currentPage - 1,
+                 percent: _dragOffset - 1.0, // Мапим 0..1 в -1..0 (т.е. идет от "перевернута" к "прямо")
+                 isRightPage: true,
+               ),
+            ] else ...[
+               // Покой
+               _buildPageContent(_currentPage),
+            ],
+
+            // --- Top Header ---
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              top: _showControls ? 0 : -100,
+              left: 0,
+              right: 0,
+              child: _GlassHeader(
+                title: 'Семейная книга',
+                subtitle: 'Страница ${_currentPage + 1} из $_totalPages',
+                onBookmarkTap: () {},
+              ),
+            ),
+
+            // --- Bottom Controls ---
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              bottom: _showControls ? 20 : -120,
+              left: 20,
+              right: 20,
+              child: _GlassControls(
+                currentPage: _currentPage + 1,
+                totalPages: _totalPages,
+                onPrev10: _jumpBackward,
+                onPrev: _prevPage,
+                onNext: _nextPage,
+                onNext10: _jumpForward,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPageContent(int index) {
     if (index < 0 || index >= _totalPages) return const SizedBox.shrink();
     return _BookPage(
@@ -253,49 +276,111 @@ class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
 
   Widget _buildTransformingPage({
     required int pageIndex,
-    required double percent, // 0.0 to -1.0
+    required double percent, // range: 0.0 (flat) to -1.0 (flipped fully left)
     required bool isRightPage,
   }) {
-    // Rotation: 0 to -90 degrees
-    // We map 0..-1 to 0..-pi/2
-    final double angle = percent * 1.5708; 
+    // 0 -> 0 degrees
+    // -1 -> -180 degrees (flipped to left)
+    // We multiply by -1 to rotate "towards" the user (positive Z)
+    // instead of "away" (negative Z). 
+    final double angle = percent * -math.pi;
     
-    // Shadow opacity
-    // 0 -> 0
-    // -1 -> 0.5 (Darkest when vertical)
-    final double shadowOpacity = (percent.abs() * 0.5).clamp(0.0, 0.5);
+    // Check if we passed the 90 degree mark (vertical)
+    // If abs(angle) > pi/2, we are showing the back of the page
+    final bool isBackVisible = angle.abs() > (math.pi / 2);
+
+    // Matrix transformation for 3D rotation with perspective
+    Matrix4 transform = Matrix4.identity()
+      ..setEntry(3, 2, 0.0015) // Perspective
+      ..rotateY(angle);
 
     return Transform(
-      transform: Matrix4.identity()
-        ..setEntry(3, 2, 0.001) // perspective
-        ..rotateY(angle),
-      alignment: Alignment.centerLeft, // Spine
+      transform: transform,
+      alignment: Alignment.centerLeft, // Hinge at the left spine
+      child: isBackVisible
+          ? Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.identity()..rotateY(math.pi), // Mirror content for back side
+              child: _buildBackPage(), // The back of the page
+            )
+          : _buildPageContent(pageIndex), // The front of the page
+    );
+  }
+
+  Widget _buildBackPage() {
+    return Container(
+      color: const Color(0xFFF5F5F5), // Off-white paper color
       child: Stack(
         fit: StackFit.expand,
         children: [
-          _buildPageContent(pageIndex),
-          // Gradient Shadow overlay
-           IgnorePointer(
-             child: Container(
-               decoration: BoxDecoration(
-                 gradient: LinearGradient(
-                   begin: Alignment.centerRight,
-                   end: Alignment.centerLeft,
-                   colors: [
-                     Colors.black.withOpacity(0.0),
-                     Colors.black.withOpacity(shadowOpacity),
-                   ],
-                   stops: const [0.5, 1.0],
-                 ),
-               ),
-             ),
-           ),
+          // Paper texture or generic back content
+          const Center(
+            child: Icon(Icons.import_contacts, color: Colors.black12, size: 48),
+          ),
+          // Inner spine shadow
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerRight,
+                end: Alignment.centerLeft,
+                colors: [
+                  Colors.black.withOpacity(0.1),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.1],
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+
+}
+
+class _BookPage extends StatefulWidget {
+  const _BookPage({super.key, required this.assetPath, required this.onTap});
+
+  final String assetPath;
+  final VoidCallback onTap;
+
+  @override
+  State<_BookPage> createState() => _BookPageState();
+}
+
+class _BookPageState extends State<_BookPage> {
+  // Чтобы не мелькало при перерисовке, можно кешировать или просто показывать
+  // Image.asset с gaplessPlayback.
+  
+  @override
+  Widget build(BuildContext context) {
+    // Используем InteractiveViewer для зума
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        color: Colors.white,
+        width: double.infinity,
+        height: double.infinity,
+        child: InteractiveViewer(
+          minScale: 1.0,
+          maxScale: 4.0,
+          child: Center(
+            child: Image.asset(
+              widget.assetPath,
+              fit: BoxFit.contain,
+              gaplessPlayback: true, // Важно для плавности при быстрой смене
+              errorBuilder: (context, error, stackTrace) =>
+                  const Center(child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey)),
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
+/// Стеклянная шапка
 class _GlassHeader extends StatelessWidget {
   const _GlassHeader({
     required this.title,
@@ -313,60 +398,51 @@ class _GlassHeader extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          color: Colors.white.withValues(alpha: 200 / 255),
+          color: Colors.white.withOpacity(0.85),
           padding: EdgeInsets.only(
             top: MediaQuery.of(context).padding.top + 4,
-            bottom: 8,
+            bottom: 12,
             left: 16,
             right: 16,
           ),
           child: SafeArea(
             bottom: false,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: IconButton(
+            child: Row(
+               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+               children: [
+                  IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
                     color: Colors.black87,
                   ),
-                ),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: IconButton(
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
                     onPressed: onBookmarkTap,
-                    icon: const Icon(Icons.bookmark_border_rounded, size: 22),
+                    icon: const Icon(Icons.bookmark_border_rounded, size: 24),
                     color: Colors.black87,
                   ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+               ],
             ),
           ),
         ),
@@ -375,86 +451,60 @@ class _GlassHeader extends StatelessWidget {
   }
 }
 
-class _GlassBottomBar extends StatelessWidget {
-  const _GlassBottomBar({
+/// Панель навигации снизу
+class _GlassControls extends StatelessWidget {
+  const _GlassControls({
     required this.currentPage,
     required this.totalPages,
-    required this.onPageChanged,
+    required this.onPrev10,
+    required this.onPrev,
+    required this.onNext,
+    required this.onNext10,
   });
 
   final int currentPage;
   final int totalPages;
-  final ValueChanged<int> onPageChanged;
+  final VoidCallback onPrev10;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+  final VoidCallback onNext10;
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
-          color: Colors.white.withValues(alpha: 200 / 255),
-          padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 8),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.6), // Полупрозрачный темный фон
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Слайдер
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 2,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                  activeTrackColor: Colors.black87,
-                  inactiveTrackColor: Colors.black12,
-                  thumbColor: Colors.black87,
-                  overlayColor: Colors.black12,
-                ),
-                child: Slider(
-                  value: currentPage.toDouble(),
-                  min: 0,
-                  max: (totalPages - 1).toDouble(),
-                  onChanged: (value) => onPageChanged(value.toInt()),
+              // Инфо о странице
+              Text(
+                'Страница $currentPage / $totalPages',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
                 ),
               ),
-              
-              // Инфо и поиск
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '${currentPage + 1} / $totalPages',
-                      style: const TextStyle(
-                        fontSize: 13, 
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black54
-                      ),
-                    ),
-                    
-                    // Кнопка поиска страницы
-                    InkWell(
-                      onTap: () => _showPageSearchDialog(context),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.search, size: 16, color: Colors.black54),
-                            SizedBox(width: 4),
-                            Text(
-                              'Найти', 
-                              style: TextStyle(fontSize: 13, color: Colors.black54),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 16),
+              // Кнопки
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _NavButton(icon: Icons.keyboard_double_arrow_left_rounded, label: '-10', onTap: onPrev10),
+                  _NavButton(icon: Icons.keyboard_arrow_left_rounded, label: '', iconSize: 32, onTap: onPrev), // Большая
+                  const SizedBox(width: 20), // Разделитель центральный
+                  _NavButton(icon: Icons.keyboard_arrow_right_rounded, label: '', iconSize: 32, onTap: onNext), // Большая
+                  _NavButton(icon: Icons.keyboard_double_arrow_right_rounded, label: '+10', onTap: onNext10),
+                ],
               ),
             ],
           ),
@@ -462,122 +512,38 @@ class _GlassBottomBar extends StatelessWidget {
       ),
     );
   }
-
-  void _showPageSearchDialog(BuildContext context) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Перейти к странице'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Номер страницы',
-            border: OutlineInputBorder(),
-          ),
-          onSubmitted: (_) {
-            _submitPage(context, controller.text);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () => _submitPage(context, controller.text),
-            child: const Text('Перейти'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _submitPage(BuildContext context, String text) {
-    final page = int.tryParse(text);
-    if (page != null && page > 0 && page <= totalPages) {
-      onPageChanged(page - 1);
-      Navigator.of(context).pop();
-    }
-  }
 }
 
-/// Виджет страницы книги с автоопределением ориентации
-class _BookPage extends StatefulWidget {
-  const _BookPage({super.key, required this.assetPath, required this.onTap});
-
-  final String assetPath;
+class _NavButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
   final VoidCallback onTap;
+  final double iconSize;
 
-  @override
-  State<_BookPage> createState() => _BookPageState();
-}
-
-class _BookPageState extends State<_BookPage> {
-  ImageInfo? _imageInfo;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadImageInfo();
-  }
-
-  Future<void> _loadImageInfo() async {
-    final image = AssetImage(widget.assetPath);
-    final stream = image.resolve(const ImageConfiguration());
-    stream.addListener(ImageStreamListener((info, _) {
-      if (mounted) {
-        setState(() {
-          _imageInfo = info;
-          _loading = false;
-        });
-      }
-    }, onError: (_, __) {
-      if (mounted) setState(() => _loading = false);
-    }));
-  }
+  const _NavButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.iconSize = 24,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Container(
-        color: Colors.white,
-        child: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_imageInfo == null) {
-      return Container(
-        color: Colors.white,
-        child: const Center(
-          child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey),
-        ),
-      );
-    }
-
-    final isHorizontal = _imageInfo!.image.width > _imageInfo!.image.height;
-
-    return GestureDetector(
-      onTap: widget.onTap,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(30),
       child: Container(
-        color: Colors.white,
-        child: InteractiveViewer(
-          minScale: 1.0,
-          maxScale: 4.0,
-          child: Center(
-            child: RotatedBox(
-              quarterTurns: isHorizontal ? -1 : 0,
-              child: Image.asset(
-                widget.assetPath,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey),
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: iconSize),
+            if (label.isNotEmpty)
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white70, fontSize: 10),
               ),
-            ),
-          ),
+          ],
         ),
       ),
     );
