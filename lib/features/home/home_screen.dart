@@ -5,6 +5,7 @@ import 'models/family_member.dart';
 import 'widgets/book_library.dart';
 import 'widgets/family_tree_view.dart';
 import 'widgets/shezhire_info_tab.dart';
+import 'data/supabase_genealogy_repository.dart';
 
 import 'widgets/unified_header.dart';
 
@@ -17,6 +18,43 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  final _repository = SupabaseGenealogyRepository();
+  
+  List<FamilyMember>? _members;
+  bool _isLoading = false;
+  Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      debugPrint('Supabase: Fetching family members...');
+      final members = await _repository.fetchFamilyMembers();
+      debugPrint('Supabase: Found ${members.length} members.');
+      if (mounted) {
+        setState(() {
+          _members = members;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Supabase Error: $e');
+      if (mounted) {
+        setState(() {
+          _error = e;
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   String _getTitle() {
     switch (_currentIndex) {
@@ -54,10 +92,12 @@ class _HomeScreenState extends State<HomeScreen> {
               index: _currentIndex,
               children: [
                 const ShezhireInfoTab(),
-                // Дерево — используем тестовые данные
-                FamilyTreeView(
-                  members: sampleFamily,
+                _TreeContainer(
+                  members: _members,
                   onMemberSelected: _openStory,
+                  isLoading: _isLoading,
+                  error: _error,
+                  onRetry: _fetchData,
                 ),
                 const BookLibrary(),
               ],

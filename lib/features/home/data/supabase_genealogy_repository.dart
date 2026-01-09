@@ -33,13 +33,15 @@ class SupabaseGenealogyRepository {
           updated_at
           ''',
         )
-        .order('id');
+        .order('orderby', ascending: true)
+        .order('id', ascending: true);
     return rows.map((row) => Person.fromJson(row as Map<String, dynamic>)).toList();
   }
 
 
   Future<List<FamilyMember>> fetchFamilyMembers() async {
     final persons = await _fetchPersons();
+    print('Supabase Repository: Fetched ${persons.length} persons from "people" table.');
     if (persons.isEmpty) return [];
 
     // Build parent-child relationships
@@ -67,8 +69,8 @@ class SupabaseGenealogyRepository {
     return members.values
         .map(
           (member) {
-            final personId = member.id.replaceFirst('person-', '');
-            final childIds = (childrenByParentId[personId] ?? [])
+            final rawId = member.id.replaceFirst('person-', '');
+            final childIds = (childrenByParentId[rawId] ?? [])
                 .map((id) => 'person-$id')
                 .toList();
             return member.copyWith(childrenIds: childIds);
@@ -77,21 +79,27 @@ class SupabaseGenealogyRepository {
         .toList();
   }
 
-
   FamilyMember _mapPersonToFamilyMember(Person person) {
-    final fullName = person.displayName;
-    final role = 'Потомок';  // Relative/Descendant
+    // Используем 'path' для красивого отображения иерархии в описании
+    final breadcrumbs = person.path ?? person.name;
+    final story = 'Шежіре жолы: $breadcrumbs\n\n'
+        '${person.author != null ? "Автор: ${person.author}\n" : ""}'
+        'Уровень в дереве: ${person.depth ?? 0}';
+
     final highlights = <String>[
-      if (person.author != null) 'Автор: ${person.author}',
-      if (person.depth != null) 'Уровень: ${person.depth}',
+      if (person.author != null) '🏷️ ${person.author}',
+      if (person.depth != null) '📊 Уровень ${person.depth}',
     ];
-    final lifeSpan = _formatLifeSpan(person.birthDate, person.deathDate);
-    final story = person.path ?? 'Информация в разработке';
+
+    // Формируем роль на основе глубины (примерная логика)
+    String role = 'Ұрпақ'; // Потомок
+    if (person.depth == 0) role = 'Түп ата'; // Основатель
+    else if (person.depth == 1) role = 'Ата'; // Дед
 
     return FamilyMember(
       id: 'person-${person.id}',
-      fullName: fullName,
-      lifeSpan: lifeSpan,
+      fullName: person.name,
+      lifeSpan: _formatLifeSpan(person.birthDate, person.deathDate),
       story: story,
       role: role,
       highlights: highlights,
