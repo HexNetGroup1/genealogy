@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../models/book.dart';
 import '../../../services/book_service.dart';
-import 'remote_book_viewer.dart';
+import '../widgets/remote_book_viewer.dart';
 
-/// Экран "Библиотека" с выбором книг - загрузка с GitHub
-class BookLibrary extends StatefulWidget {
-  const BookLibrary({super.key});
+/// Экран выбора книги из списка
+class BookListScreen extends StatefulWidget {
+  const BookListScreen({super.key});
 
   @override
-  State<BookLibrary> createState() => _BookLibraryState();
+  State<BookListScreen> createState() => _BookListScreenState();
 }
 
-class _BookLibraryState extends State<BookLibrary> {
+class _BookListScreenState extends State<BookListScreen> {
   final BookService _bookService = BookService.instance;
   
   List<Book>? _books;
@@ -60,7 +60,13 @@ class _BookLibraryState extends State<BookLibrary> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        title: const Text('Семейные книги'),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+      ),
       body: _buildBody(),
     );
   }
@@ -73,7 +79,7 @@ class _BookLibraryState extends State<BookLibrary> {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('Загрузка книг...'),
+            Text('Загрузка списка книг...'),
           ],
         ),
       );
@@ -121,29 +127,27 @@ class _BookLibraryState extends State<BookLibrary> {
 
     return RefreshIndicator(
       onRefresh: () => _loadBooks(),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.65,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
-          itemCount: _books!.length,
-          itemBuilder: (context, index) {
-            final book = _books![index];
-            return _BookCard(
-              book: book,
-              onTap: () => _openBook(book),
-            );
-          },
+      child: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.7,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
         ),
+        itemCount: _books!.length,
+        itemBuilder: (context, index) {
+          return _BookCard(
+            book: _books![index],
+            onTap: () => _openBook(_books![index]),
+          );
+        },
       ),
     );
   }
 }
 
+/// Карточка книги
 class _BookCard extends StatelessWidget {
   const _BookCard({
     required this.book,
@@ -157,61 +161,72 @@ class _BookCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(25),
-                    blurRadius: 10,
-                    offset: const Offset(4, 6),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Обложка
+            Expanded(
+              flex: 4,
+              child: CachedNetworkImage(
+                imageUrl: book.thumbnailUrl,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[200],
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                ],
-              ),
-              child: Hero(
-                tag: 'book_cover_${book.id}',
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
-                    imageUrl: book.thumbnailUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[200],
-                      child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.book, size: 48),
-                    ),
-                  ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.book, size: 48, color: Colors.grey),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            book.title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Colors.black87,
+            // Информация
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      book.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${book.pageCount} страниц',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${book.pageCount} страниц',
-            style: TextStyle(
-              color: Colors.grey[700],
-              fontSize: 13,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

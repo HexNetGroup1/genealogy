@@ -4,6 +4,9 @@ import 'data/sample_family.dart';
 import 'models/family_member.dart';
 import 'widgets/book_library.dart';
 import 'widgets/family_tree_view.dart';
+import 'widgets/shezhire_info_tab.dart';
+
+import 'widgets/unified_header.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,6 +17,19 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+
+  String _getTitle() {
+    switch (_currentIndex) {
+      case 0:
+        return 'Басты';
+      case 1:
+        return 'Шежіре';
+      case 2:
+        return 'Библиотека';
+      default:
+        return 'Genealogy';
+    }
+  }
 
   void _openStory(FamilyMember member) {
     showModalBottomSheet<void>(
@@ -28,25 +44,40 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: IndexedStack(
-          index: _currentIndex,
-          children: [
-            // Дерево — используем тестовые данные
-            FamilyTreeView(
-              members: sampleFamily,
-              onMemberSelected: _openStory,
+      body: Stack(
+        children: [
+          Padding(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 56, // Точно под хедером
             ),
-            const BookLibrary(),
-            const ProfileTab(),
-          ],
-        ),
+            child: IndexedStack(
+              index: _currentIndex,
+              children: [
+                const ShezhireInfoTab(),
+                // Дерево — используем тестовые данные
+                FamilyTreeView(
+                  members: sampleFamily,
+                  onMemberSelected: _openStory,
+                ),
+                const BookLibrary(),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: UnifiedHeader(
+              title: _getTitle(),
+            ),
+          ),
+        ],
       ),
-      extendBody: true,
+      extendBody: false,
       bottomNavigationBar: ClipRRect(
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withAlpha(180),
+            color: Colors.white,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withAlpha(10),
@@ -63,23 +94,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _NavItem(
+                    icon: Icons.home_outlined,
+                    selectedIcon: Icons.home,
+                    label: 'Басты',
+                    isSelected: _currentIndex == 0,
+                    onTap: () => setState(() => _currentIndex = 0),
+                  ),
+                  _NavItem(
                     icon: Icons.account_tree_outlined,
                     selectedIcon: Icons.account_tree,
                     label: 'Шежіре',
-                    isSelected: _currentIndex == 0,
-                    onTap: () => setState(() => _currentIndex = 0),
+                    isSelected: _currentIndex == 1,
+                    onTap: () => setState(() => _currentIndex = 1),
                   ),
                   _NavItem(
                     icon: Icons.menu_book_outlined,
                     selectedIcon: Icons.menu_book,
                     label: 'Кітап',
-                    isSelected: _currentIndex == 1,
-                    onTap: () => setState(() => _currentIndex = 1),
-                  ),
-                  _NavItem(
-                    icon: Icons.person_outline,
-                    selectedIcon: Icons.person,
-                    label: 'Профиль',
                     isSelected: _currentIndex == 2,
                     onTap: () => setState(() => _currentIndex = 2),
                   ),
@@ -323,189 +354,6 @@ class MemoriesTab extends StatelessWidget {
   }
 }
 
-class ProfileTab extends StatelessWidget {
-  const ProfileTab({super.key});
-
-  static const Color _primaryGreen = Color(0xFF2E7D32);
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Аватар и email
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: _primaryGreen.withAlpha(20),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: _primaryGreen,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.person,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Пользователь',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'user@example.com',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () {},
-                color: _primaryGreen,
-              ),
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Настройки
-        Text(
-          'Настройки',
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _SettingsItem(
-          icon: Icons.notifications_outlined,
-          title: 'Уведомления',
-          onTap: () {},
-        ),
-        _SettingsItem(
-          icon: Icons.language_outlined,
-          title: 'Язык',
-          subtitle: 'Русский',
-          onTap: () {},
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Документы
-        Text(
-          'Документы',
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _SettingsItem(
-          icon: Icons.description_outlined,
-          title: 'Политика конфиденциальности',
-          onTap: () {},
-        ),
-        _SettingsItem(
-          icon: Icons.article_outlined,
-          title: 'Пользовательское соглашение',
-          onTap: () {},
-        ),
-        _SettingsItem(
-          icon: Icons.help_outline,
-          title: 'Справка и поддержка',
-          onTap: () {},
-        ),
-        _SettingsItem(
-          icon: Icons.info_outline,
-          title: 'О приложении',
-          subtitle: 'Версия 1.0.0',
-          onTap: () {},
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Выход
-        _SettingsItem(
-          icon: Icons.logout,
-          title: 'Выйти из аккаунта',
-          iconColor: Colors.red,
-          titleColor: Colors.red,
-          onTap: () {},
-        ),
-        
-        const SizedBox(height: 32),
-      ],
-    );
-  }
-}
-
-class _SettingsItem extends StatelessWidget {
-  const _SettingsItem({
-    required this.icon,
-    required this.title,
-    this.subtitle,
-    this.trailing,
-    this.iconColor,
-    this.titleColor,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final Widget? trailing;
-  final Color? iconColor;
-  final Color? titleColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: iconColor ?? Colors.grey[700]),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: titleColor,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        subtitle: subtitle != null ? Text(subtitle!) : null,
-        trailing: trailing ?? const Icon(Icons.chevron_right, color: Colors.grey),
-        onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-    );
-  }
-}
 
 // Helpers
 

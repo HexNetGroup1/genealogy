@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'dart:math' as math;
+import 'package:flutter/material.dart';
+import 'unified_header.dart';
 
 /// Просмотрщик книги с реалистичной анимацией и навигацией
 class BookViewer extends StatefulWidget {
@@ -23,10 +24,8 @@ class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _startHideTimer();
-    // Poll for page changes since onPageFlip callback is missing in this version
-    _pagePollTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
-      _checkPage();
-    });
+    // Poll for page changes removed as it relied on undefined variables
+
   }
 
   @override
@@ -36,38 +35,8 @@ class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // Hack to get current page from controller if possible
-  // Adjusting to potential property names found or common patterns.
-  // If 'pageNumber' doesn't exist, this might fail at runtime if we cast.
-  // We'll inspect via string or look for public getters.
-  // For now, checking if we can rely on standard navigation to update state,
-  // but swipe updates won't be caught without polling.
-  void _checkPage() {
-    // Attempting to access page number. 
-    // Note: If PageFlipWidgetState doesn't expose it, we are limited.
-    // However, usually State classes for such widgets expose 'pageNumber' or 'index'.
-    // We will try dynamic access to avoid static analysis errors if possible or just guess 'pageNumber'.
-    // Since we can't use reflection easily, we hope 'pageNumber' exists.
-    try {
-      // Dynamic access to bypass static analysis if property is unknown to analyzer but present at runtime
-      // (This is risky but cleaner than failing compilation if we are unsure)
-      // Actually, better to check if we can navigate.
-      // Let's assume there is no public property for now and rely on manual updates for buttons,
-      // and maybe the user accepts that swipe doesn't update slider immediately?
-      // No, that's bad.
-      // Let's try casting to dynamic.
-      final dynamic state = _controller.currentState;
-      if (state != null) {
-        // Checking common property names
-        // int? page = state.pageNumber; 
-        // if (page != null && page != _currentPage) {
-        //   setState(() => _currentPage = page);
-        // }
-      }
-    } catch (e) {
-      // Ignore
-    }
-  }
+  // _checkPage removed (relied on undefined _controller)
+
 
   void _startHideTimer() {
     _hideTimer?.cancel();
@@ -236,10 +205,17 @@ class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
               top: _showControls ? 0 : -100,
               left: 0,
               right: 0,
-              child: _GlassHeader(
+              child: UnifiedHeader(
                 title: 'Семейная книга',
                 subtitle: 'Страница ${_currentPage + 1} из $_totalPages',
-                onBookmarkTap: () {},
+                showBackButton: true,
+                actions: [
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.bookmark_border_rounded, size: 24),
+                    color: Colors.black87,
+                  ),
+                ],
               ),
             ),
 
@@ -380,76 +356,6 @@ class _BookPageState extends State<_BookPage> {
   }
 }
 
-/// Стеклянная шапка
-class _GlassHeader extends StatelessWidget {
-  const _GlassHeader({
-    required this.title,
-    required this.subtitle,
-    required this.onBookmarkTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final VoidCallback onBookmarkTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          color: Colors.white.withOpacity(0.85),
-          padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 4,
-            bottom: 12,
-            left: 16,
-            right: 16,
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Row(
-               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-               children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-                    color: Colors.black87,
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[800],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    onPressed: onBookmarkTap,
-                    icon: const Icon(Icons.bookmark_border_rounded, size: 24),
-                    color: Colors.black87,
-                  ),
-               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// Панель навигации снизу
 class _GlassControls extends StatelessWidget {
