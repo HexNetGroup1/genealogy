@@ -12,30 +12,55 @@ class SupabaseGenealogyRepository {
   final SupabaseClient _client;
 
   Future<List<Person>> _fetchPersons() async {
-    final List<dynamic> rows = await _client
-        .from('people')
-        .select(
-          '''
-          id,
-          name,
-          parent_id,
-          birth_year,
-          death_year,
-          image,
-          author,
-          depth,
-          path,
-          meta_status,
-          locked,
-          orderby,
-          children_count,
-          created_at,
-          updated_at
-          ''',
-        )
-        .order('orderby', ascending: true)
-        .order('id', ascending: true);
-    return rows.map((row) => Person.fromJson(row as Map<String, dynamic>)).toList();
+    final allRows = <dynamic>[];
+    bool hasMore = true;
+    int from = 0;
+    const int pageSize = 1000;
+
+    print('Supabase: Loading all persons in batches...');
+
+    while (hasMore) {
+      final List<dynamic> rows = await _client
+          .from('people')
+          .select('''
+            id,
+            name,
+            parent_id,
+            birth_year,
+            death_year,
+            image,
+            author,
+            depth,
+            path,
+            meta_status,
+            locked,
+            orderby,
+            children_count,
+            created_at,
+            updated_at
+            ''')
+          .order('depth', ascending: true)
+          .order('orderby', ascending: true)
+          .order('id', ascending: true)
+          .range(from, from + pageSize - 1);
+
+      allRows.addAll(rows);
+      print('Supabase: Fetched batch ${from ~/ pageSize + 1} (${rows.length} rows). Total: ${allRows.length}');
+      
+      if (rows.length < pageSize) {
+        hasMore = false;
+      } else {
+        from += pageSize;
+      }
+      
+      // Safety break to prevent infinite loops in case of unexpected API behavior
+      if (allRows.length > 20000) {
+        print('Supabase Caution: Reached 20k limit, stopping fetch.');
+        break;
+      }
+    }
+    
+    return allRows.map((row) => Person.fromJson(row as Map<String, dynamic>)).toList();
   }
 
 
@@ -49,14 +74,22 @@ class SupabaseGenealogyRepository {
       for (final person in persons) person.id: person,
     };
     
+    print('Supabase: Verifying links for ${persons.length} persons...');
+    int linksFound = 0;
     final childrenByParentId = <String, List<String>>{};
     for (final person in persons) {
       if (person.parentId != null) {
-        childrenByParentId
-            .putIfAbsent(person.parentId!, () => [])
-            .add(person.id);
+        if (personById.containsKey(person.parentId)) {
+          linksFound++;
+          childrenByParentId
+              .putIfAbsent(person.parentId!, () => [])
+              .add(person.id);
+        } else {
+          print('Supabase WARNING: parent_id "${person.parentId}" for "${person.name}" NOT FOUND in people list!');
+        }
       }
     }
+    print('Supabase: Total valid parent-child links found: $linksFound');
 
     // Convert to FamilyMember
     final members = <String, FamilyMember>{};
@@ -66,7 +99,7 @@ class SupabaseGenealogyRepository {
     }
 
     // Assign children to each member
-    return members.values
+    final result = members.values
         .map(
           (member) {
             final rawId = member.id.replaceFirst('person-', '');
@@ -77,6 +110,16 @@ class SupabaseGenealogyRepository {
           },
         )
         .toList();
+
+    // Debug: Find roots
+    final allChildIds = result.expand((m) => m.childrenIds).toSet();
+    final roots = result.where((m) => !allChildIds.contains(m.id)).toList();
+    print('Supabase: Identified ${roots.length} roots: ${roots.map((r) => r.fullName).join(', ')}');
+    if (roots.isEmpty && result.isNotEmpty) {
+      print('Supabase Warning: No roots found! Circular dependency or missing parents?');
+    }
+
+    return result;
   }
 
   FamilyMember _mapPersonToFamilyMember(Person person) {

@@ -34,10 +34,15 @@ class Person {
   final DateTime? updatedAt;
 
   factory Person.fromJson(Map<String, dynamic> json) {
+    final rawId = json['id']?.toString().trim().toLowerCase() ?? '';
+    final rawParentId = json['parent_id']?.toString().trim().toLowerCase();
+    //Treat empty string as null
+    final parentId = (rawParentId != null && rawParentId.isNotEmpty) ? rawParentId : null;
+
     return Person(
-      id: json['id'] as String,
+      id: rawId,
       name: json['name'] as String? ?? 'Unknown',
-      parentId: json['parent_id'] as String?,
+      parentId: parentId,
       birthYear: json['birth_year'] as int?,
       deathYear: json['death_year'] as int?,
       image: json['image'] as String?,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/family_member.dart';
+import 'dart:math';
 
 /// Древо с абсолютным позиционированием и анимацией
 class FamilyTreeView extends StatefulWidget {
@@ -17,8 +18,8 @@ class FamilyTreeView extends StatefulWidget {
 }
 
 class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProviderStateMixin {
-  static const Color _primaryGreen = Color(0xFF2E7D32);
-  static const Color _bgGreen = Color(0xFFE8F5E9);
+  static const Color _primaryYellow = Color(0xFFFBC02D); // Deep yellow/gold
+  static const Color _bgYellow = Colors.white; // Changed from light yellow to white
 
   static const double _nodeWidth = 140;
   static const double _nodeHeight = 50;
@@ -70,11 +71,8 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
       if (source != null && target != null) {
         newPositions[id] = Offset.lerp(source, target, t)!;
       } else if (source != null) {
-        // Исчезает -> анимируем к родителю (если найдем) или просто исчезаем
-        // Для простоты пока оставляем на месте, но можно улучшить
         newPositions[id] = source; 
       } else if (target != null) {
-        // Появляется -> уже должен быть обработан в prepareLayout
         newPositions[id] = target;
       }
       
@@ -92,7 +90,6 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
       final member = byId[id];
       if (member == null) continue;
       
-      // Если у ребенка есть позиция, рисуем линию
       for (final childId in member.childrenIds) {
         if (newPositions.containsKey(childId)) {
           newConnections.add(_Connection(id, childId));
@@ -134,15 +131,13 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
     final roots = _getRoots(byId);
     _expandToDepth(roots, byId, 0);
     
-    // Начальный расчет без анимации
     _calculateTargetLayout();
     _currentPositions = Map.of(_targetPositions);
     _renderPositions = Map.of(_targetPositions);
-    _updateRenderData(); // Force update connections size
+    _updateRenderData(); 
   }
 
   void _updateRenderData() {
-    // Вспомогательный метод для обновления соединений без анимации
     double maxX = 0;
     double maxY = 0;
     for (final p in _renderPositions.values) {
@@ -218,56 +213,33 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
   }
 
   void _animateLayout() {
-    _calculateTargetLayout(); // Заполняет _targetPositions
-    
-    // Подготовка _sourcePositions
+    _calculateTargetLayout(); 
     _sourcePositions = Map.of(_currentPositions);
-
-    // Обработка появляющихся узлов (Appearing)
-    // Если узел есть в target, но нет в source -> ставим его в позицию родителя из source
-    // Обработка исчезающих узлов (Disappearing)
-    // Если узел есть в source, но нет в target -> ставим его в target позицию родителя (схлопываем)
-
-    // Сложный момент: родитель тоже может двигаться.
-    // Простой вариант: 
-    // New nodes start at their PARENT's SOURCE position.
-    // Deleted nodes end at their PARENT's TARGET position.
     
     final byId = _getMemberMap();
 
     // 1. New nodes
     for (final id in _targetPositions.keys) {
       if (!_sourcePositions.containsKey(id)) {
-        // Найти родителя
         String? parentId;
-        // Это неэффективно, но для 20-50 нод нормально. Можно оптимизировать map-ом child->parent
         for (final m in widget.members) {
           if (m.childrenIds.contains(id)) {
             parentId = m.id;
             break;
           }
         }
-        
         if (parentId != null && _sourcePositions.containsKey(parentId)) {
            _sourcePositions[id] = _sourcePositions[parentId]!;
         } else {
-           _sourcePositions[id] = _targetPositions[id]!; // Fallback
+           _sourcePositions[id] = _targetPositions[id]!; 
         }
       }
     }
 
     // 2. Deleted nodes (Collapsed)
-    // Мы хотим, чтобы они анимировались. Значит они должны быть в _targetPositions тоже!
-    // Мы добавим их в _targetPositions, но в позиции их РОДИТЕЛЯ.
-    // А после анимации - удалим из _currentPositions списка отрисовки.
-    // Но _onTick использует _targetPositions для интерполяции.
-    // Так что добавим.
-    
-    // Нам нужен список ключей, которые исчезли
     final disappearing = _sourcePositions.keys.where((k) => !_targetPositions.containsKey(k)).toList();
     
     for (final id in disappearing) {
-       // Найти родителя
         String? parentId;
         for (final m in widget.members) {
           if (m.childrenIds.contains(id)) {
@@ -279,18 +251,12 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
         if (parentId != null && _targetPositions.containsKey(parentId)) {
            _targetPositions[id] = _targetPositions[parentId]!;
         } else {
-           // Если родитель тоже исчез? Рекурсия сложная. 
-           // Просто оставляем текущую позицию или скрываем.
            _targetPositions[id] = _sourcePositions[id]!; 
         }
     }
 
     _controller.forward(from: 0).then((_) {
-      // Cleanup cleanup deleted nodes
        setState(() {
-         // Сохраняем только те, что должны быть (реальные target)
-         // Но мы модифицировали _targetPositions выше. Нужно пересчитать чистый target или отфильтровать.
-         // Проще пересчитать.
          _calculateTargetLayout(); 
          _currentPositions = Map.of(_targetPositions);
          _renderPositions = Map.of(_targetPositions);
@@ -300,9 +266,8 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
     });
   }
 
-
   void _toggleExpand(String id) {
-    if (_controller.isAnimating) return; // Ждем окончания
+    if (_controller.isAnimating) return; 
     
     setState(() {
       if (_expandedIds.contains(id)) {
@@ -331,7 +296,7 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
       builder: (context) {
         int tempDepth = _expandDepth;
         return AlertDialog(
-          title: const Text('Глубина раскрытия'),
+          title: const Text('Жаю тереңдігі'),
           content: StatefulBuilder(
             builder: (context, setDialogState) {
               return Column(
@@ -339,12 +304,12 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
                 children: [
                   Text(
                     '$tempDepth',
-                    style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: _primaryGreen),
+                    style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: _primaryYellow),
                   ),
                   Slider(
                     value: tempDepth.toDouble(),
                     min: 0, max: 10, divisions: 10,
-                    activeColor: _primaryGreen,
+                    activeColor: _primaryYellow,
                     onChanged: (v) => setDialogState(() => tempDepth = v.round()),
                   ),
                 ],
@@ -354,15 +319,15 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена'),
+              child: const Text('Болдырмау'),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.pop(context);
                 _changeDepth(tempDepth);
               },
-              style: FilledButton.styleFrom(backgroundColor: _primaryGreen),
-              child: const Text('Применить'),
+              style: FilledButton.styleFrom(backgroundColor: _primaryYellow),
+              child: const Text('Қолдану'),
             ),
           ],
         );
@@ -377,26 +342,24 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
     if (!_initialized) {
       _initExpandedIds();
     }
-    // Если вдруг ресайз или апдейт без анимации, можно форсировать
-    // Но пока надеемся на initState/actions
     
     final byId = _getMemberMap();
 
     return Container(
-      color: _bgGreen,
+      color: _bgYellow,
       child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                 Text('${widget.members.length} чел.', style: const TextStyle(fontWeight: FontWeight.bold, color: _primaryGreen)),
+                 Text('${widget.members.length} адам', style: const TextStyle(fontWeight: FontWeight.bold, color: _primaryYellow)),
                  const Spacer(),
                  FilledButton.icon(
                    onPressed: _showDepthDialog,
                    icon: const Icon(Icons.unfold_more, size: 18),
-                   label: Text('Глубина: $_expandDepth'),
-                   style: FilledButton.styleFrom(backgroundColor: _primaryGreen),
+                   label: Text('Тереңдік: $_expandDepth'),
+                   style: FilledButton.styleFrom(backgroundColor: _primaryYellow),
                  ),
               ],
             ),
@@ -420,7 +383,7 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
                         positions: _renderPositions,
                         nodeWidth: _nodeWidth,
                         nodeHeight: _nodeHeight,
-                        color: _primaryGreen.withAlpha(100),
+                        color: _primaryYellow.withAlpha(100),
                       ),
                     ),
                     
@@ -447,7 +410,7 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
                              isExpanded: isExpanded,
                              width: _nodeWidth,
                              height: _nodeHeight,
-                             primaryColor: _primaryGreen,
+                             primaryColor: _primaryYellow,
                            ),
                          ),
                        );
@@ -504,18 +467,26 @@ class _NodeWidget extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(4),
-            child: CircleAvatar(
-              backgroundColor: primaryColor,
-              radius: 18,
-              child: Text(
-                member.fullName.isNotEmpty ? member.fullName[0].toUpperCase() : '?',
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/logo.png',
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => CircleAvatar(
+                  backgroundColor: primaryColor,
+                  radius: 18,
+                  child: Text(
+                    member.fullName.isNotEmpty ? member.fullName[0].toUpperCase() : '?',
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                ),
               ),
             ),
           ),
           Expanded(
             child: Text(
-              member.fullName.split(' ').first,
+              member.fullName,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
