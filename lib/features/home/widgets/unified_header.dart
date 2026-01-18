@@ -1,5 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../auth/login_screen.dart';
+import '../../admin/admin_dashboard_screen.dart';
+import '../../../services/auth_service.dart';
 
 class UnifiedHeader extends StatelessWidget {
   final String title;
@@ -72,7 +75,22 @@ class UnifiedHeader extends StatelessWidget {
           else if (showBackButton)
             const SizedBox(width: 48) // To balance the back button
           else
-            const SizedBox(width: 16),
+            IconButton(
+              onPressed: () {
+                final user = AuthService().currentUser;
+                if (user == null) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                } else {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                  );
+                }
+              },
+              icon: const Icon(Icons.admin_panel_settings_outlined, size: 20),
+              color: Colors.black54,
+            ),
         ],
       ),
     );

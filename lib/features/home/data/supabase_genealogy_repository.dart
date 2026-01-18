@@ -63,6 +63,52 @@ class SupabaseGenealogyRepository {
     return allRows.map((row) => Person.fromJson(row as Map<String, dynamic>)).toList();
   }
 
+  Future<List<Person>> getAllPersons() => _fetchPersons();
+
+  Future<void> addPerson(Person person) async {
+    int depth = 0;
+    String path = person.name;
+
+    if (person.parentId != null) {
+      try {
+        final parentData = await _client
+            .from('people')
+            .select('depth, path')
+            .eq('id', person.parentId!)
+            .single();
+        
+        depth = (parentData['depth'] as int? ?? 0) + 1;
+        final parentPath = parentData['path'] as String? ?? '';
+        path = parentPath.isNotEmpty ? '$parentPath.${person.name}' : person.name;
+      } catch (e) {
+        print('Warning: Could not fetch parent data for depth calculation: $e');
+        // Fallback to defaults or rethrow if necessary
+      }
+    }
+
+    final data = person.toJson();
+    data.remove('id'); // Supabase generates UUID
+    data.remove('created_at');
+    data.remove('updated_at');
+    
+    // Explicitly set calculated fields
+    data['depth'] = depth;
+    data['path'] = path;
+    
+    await _client.from('people').insert(data);
+  }
+
+  Future<void> updatePerson(Person person) async {
+    final data = person.toJson();
+    data.remove('created_at');
+    data.remove('updated_at');
+    await _client.from('people').update(data).eq('id', person.id);
+  }
+
+  Future<void> deletePerson(String id) async {
+    await _client.from('people').delete().eq('id', id);
+  }
+
 
   Future<List<FamilyMember>> fetchFamilyMembers() async {
     final persons = await _fetchPersons();

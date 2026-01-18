@@ -62,6 +62,24 @@ class Person {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      if (id.isNotEmpty) 'id': id,
+      'name': name,
+      'parent_id': parentId,
+      'birth_year': birthYear,
+      'death_year': deathYear,
+      'image': image,
+      'author': author,
+      'depth': depth,
+      'path': path,
+      'meta_status': metaStatus,
+      'locked': locked,
+      'orderby': orderBy,
+      'children_count': childrenCount,
+    };
+  }
+
   factory Person.fromMap(Map<String, dynamic> map) => Person.fromJson(map);
 
   String get displayName => name;
