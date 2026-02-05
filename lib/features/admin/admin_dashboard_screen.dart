@@ -20,7 +20,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _isLoading = false;
   final _searchController = TextEditingController();
 
-  static const Color _primaryGreen = Color(0xFF2E7D32);
+  static const Color _primaryGreen = Color(0xFFFBC02D);
 
   @override
   void initState() {
@@ -259,8 +259,8 @@ class _AdminPersonCard extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: const Color(0xFF2E7D32).withAlpha(30),
-                  child: const Icon(Icons.person, color: Color(0xFF2E7D32)),
+                  backgroundColor: const Color(0xFFFBC02D).withAlpha(30),
+                  child: const Icon(Icons.person, color: Color(0xFFFBC02D)),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -287,7 +287,7 @@ class _AdminPersonCard extends StatelessWidget {
                 _ActionButton(
                   icon: Icons.person_add_alt_1,
                   label: 'Ұрпақ қосу',
-                  color: const Color(0xFF2E7D32),
+                  color: const Color(0xFFFBC02D),
                   onTap: onAddChild,
                 ),
                 const SizedBox(width: 8),

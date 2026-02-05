@@ -27,6 +27,7 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
   static const double _nodeGap = 20;
 
   late AnimationController _controller;
+  late TransformationController _transformationController;
   
   Map<String, Offset> _currentPositions = {};
   Map<String, Offset> _targetPositions = {};
@@ -49,11 +50,13 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
       vsync: this,
       duration: const Duration(milliseconds: 600),
     )..addListener(_onTick);
+    _transformationController = TransformationController();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _transformationController.dispose();
     super.dispose();
   }
 
@@ -335,6 +338,31 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
     );
   }
 
+  void _resetZoom() {
+    _transformationController.value = Matrix4.identity();
+  }
+
+  void _fitToScreen() {
+    if (_renderWidth == 0 || _renderHeight == 0) return;
+    
+    final size = MediaQuery.of(context).size;
+    final headerHeight = MediaQuery.of(context).padding.top + 120; // Approx header + controls
+    final availableHeight = size.height - headerHeight - 100; // Buffer
+    final availableWidth = size.width - 40;
+
+    final scaleX = availableWidth / _renderWidth;
+    final scaleY = availableHeight / _renderHeight;
+    final scale = min(scaleX, min(scaleY, 1.0));
+
+    // Центрируем
+    final dx = (availableWidth - _renderWidth * scale) / 2;
+    final dy = (availableHeight - _renderHeight * scale) / 2;
+
+    _transformationController.value = Matrix4.identity()
+      ..translate(dx, dy)
+      ..scale(scale);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.members.isEmpty) return const Center(child: Text('Пусто'));
@@ -355,7 +383,18 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
               children: [
                  Text('${widget.members.length} адам', style: const TextStyle(fontWeight: FontWeight.bold, color: _primaryYellow)),
                  const Spacer(),
-                 FilledButton.icon(
+                  IconButton(
+                    onPressed: _resetZoom,
+                    icon: const Icon(Icons.center_focus_strong_outlined, color: _primaryYellow),
+                    tooltip: 'Reset',
+                  ),
+                  IconButton(
+                    onPressed: _fitToScreen,
+                    icon: const Icon(Icons.fullscreen_exit_rounded, color: _primaryYellow),
+                    tooltip: 'Fit',
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
                    onPressed: _showDepthDialog,
                    icon: const Icon(Icons.unfold_more, size: 18),
                    label: Text('Тереңдік: $_expandDepth'),
@@ -367,10 +406,11 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
           
           Expanded(
             child: InteractiveViewer(
+              transformationController: _transformationController,
               constrained: false,
-              boundaryMargin: const EdgeInsets.all(100),
+              boundaryMargin: const EdgeInsets.all(500),
               minScale: 0.1,
-              maxScale: 3.0,
+              maxScale: 4.0,
               child: SizedBox(
                 width: _renderWidth,
                 height: _renderHeight,

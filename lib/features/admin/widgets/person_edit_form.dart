@@ -28,7 +28,7 @@ class _PersonEditFormState extends State<PersonEditForm> {
 
   bool _isLoading = false;
 
-  static const Color _primaryGreen = Color(0xFF2E7D32);
+  static const Color _primaryGreen = Color(0xFFFBC02D);
 
   @override
   void initState() {

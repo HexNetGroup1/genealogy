@@ -16,7 +16,7 @@ class ShezhireInfoTab extends StatelessWidget {
           'Шежіре дегеніміз не?',
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF1B5E20),
+            color: const Color(0xFFF57F17),
           ),
           textAlign: TextAlign.center,
         ),
@@ -43,23 +43,71 @@ class ShezhireInfoTab extends StatelessWidget {
         const SizedBox(height: 24),
         
         Container(
-          padding: const EdgeInsets.all(20),
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F8E9),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFC8E6C9)),
+            borderRadius: BorderRadius.circular(24),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFFFFDE7),
+                Color(0xFFFFF9C4),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFBC02D).withAlpha(40),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          child: const Column(
+          child: Stack(
             children: [
-              Icon(Icons.info_outline_rounded, color: Color(0xFF388E3C)),
-              SizedBox(height: 12),
-              Text(
-                'Бұл қосымша сізге өз шежіреңізді сақтауға және келесі ұрпаққа жеткізуге көмектеседі.',
-                style: TextStyle(
-                  color: Color(0xFF2E7D32),
-                  fontStyle: FontStyle.italic,
+              Positioned(
+                right: -20,
+                top: -20,
+                child: Icon(
+                  Icons.history_edu,
+                  size: 100,
+                  color: const Color(0xFFFBC02D).withAlpha(0x1A), // Using 0x1A for 10% alpha
                 ),
-                textAlign: TextAlign.center,
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFF57F17).withAlpha(40),
+                            blurRadius: 10,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.info_outline_rounded,
+                        color: Color(0xFFF57F17),
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Бұл қосымша сізге өз шежіреңізді сақтауға және келесі ұрпаққа жеткізуге көмектеседі.',
+                      style: TextStyle(
+                        color: Color(0xFFE65100),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -97,14 +145,14 @@ class _InfoCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: const Color(0xFF2E7D32), size: 28),
+                Icon(icon, color: const Color(0xFFFBC02D), size: 28),
                 const SizedBox(width: 12),
                 Text(
                   title,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E7D32),
+                    color: Color(0xFFFBC02D),
                   ),
                 ),
               ],

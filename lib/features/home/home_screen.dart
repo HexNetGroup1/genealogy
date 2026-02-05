@@ -86,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Padding(
             padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top + 56, // Точно под хедером
+              top: MediaQuery.of(context).padding.top + 72, // Больше отступ от хедера
             ),
             child: IndexedStack(
               index: _currentIndex,
@@ -179,7 +179,7 @@ class _NavItem extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  static const Color _primaryGreen = Color(0xFF2E7D32);
+  static const Color _primaryGreen = Color(0xFFFBC02D);
 
   @override
   Widget build(BuildContext context) {
