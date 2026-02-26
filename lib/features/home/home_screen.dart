@@ -36,9 +36,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _error = null;
     });
     try {
-      debugPrint('Supabase: Fetching family members...');
-      final members = await _repository.fetchFamilyMembers();
-      debugPrint('Supabase: Found ${members.length} members.');
+      debugPrint('Supabase: Fetching family roots...');
+      final members = await _repository.getRoots();
+      debugPrint('Supabase: Found ${members.length} roots.');
       if (mounted) {
         setState(() {
           _members = members;
@@ -98,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   isLoading: _isLoading,
                   error: _error,
                   onRetry: _fetchData,
+                  onLoadChildren: (parentId) => _repository.getChildren(parentId),
                 ),
                 const BookLibrary(),
               ],
@@ -230,6 +231,7 @@ class _TreeContainer extends StatelessWidget {
     required this.isLoading,
     required this.error,
     required this.onRetry,
+    required this.onLoadChildren,
   });
 
   final List<FamilyMember>? members;
@@ -237,6 +239,7 @@ class _TreeContainer extends StatelessWidget {
   final bool isLoading;
   final Object? error;
   final VoidCallback onRetry;
+  final Future<List<FamilyMember>> Function(String parentId) onLoadChildren;
 
   @override
   Widget build(BuildContext context) {
@@ -266,6 +269,7 @@ class _TreeContainer extends StatelessWidget {
         FamilyTreeView(
           members: resolvedMembers,
           onMemberSelected: onMemberSelected,
+          onLoadChildren: onLoadChildren,
         ),
         if (!hasRemoteMembers)
           Positioned(

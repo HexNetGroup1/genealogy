@@ -54,13 +54,53 @@ class SupabaseGenealogyRepository {
       }
       
       // Safety break to prevent infinite loops in case of unexpected API behavior
-      if (allRows.length > 20000) {
-        print('Supabase Caution: Reached 20k limit, stopping fetch.');
+      if (allRows.length > 200000) {
+        print('Supabase Caution: Reached 200k limit, stopping fetch.');
         break;
       }
     }
     
     return allRows.map((row) => Person.fromJson(row as Map<String, dynamic>)).toList();
+  }
+
+  // Загружаем корневых предков (где parent_id IS NULL)
+  Future<List<FamilyMember>> getRoots() async {
+    try {
+      final List<dynamic> rows = await _client
+          .from('people')
+          .select()
+          .isFilter('parent_id', null)
+          .order('orderby', ascending: true)
+          .order('id', ascending: true)
+          .limit(100); // Берем первые 100 корней для надежности
+
+      final persons = rows.map((row) => Person.fromJson(row as Map<String, dynamic>)).toList();
+      return persons.map((p) => _mapPersonToFamilyMember(p, hasChildren: (p.childrenCount ?? 0) > 0)).toList();
+    } catch (e) {
+      print('Supabase Error in getRoots: $e');
+      return [];
+    }
+  }
+
+  // Загружаем детей конкретного предка
+  Future<List<FamilyMember>> getChildren(String parentId) async {
+    try {
+      // parentId в FamilyMember имеет формат "person-UUID", убираем префикс
+      final rawParentId = parentId.replaceFirst('person-', '');
+      
+      final List<dynamic> rows = await _client
+          .from('people')
+          .select()
+          .eq('parent_id', rawParentId)
+          .order('orderby', ascending: true)
+          .order('id', ascending: true);
+
+      final persons = rows.map((row) => Person.fromJson(row as Map<String, dynamic>)).toList();
+      return persons.map((p) => _mapPersonToFamilyMember(p, hasChildren: (p.childrenCount ?? 0) > 0)).toList();
+    } catch (e) {
+      print('Supabase Error in getChildren ($parentId): $e');
+      return [];
+    }
   }
 
   Future<List<Person>> getAllPersons() => _fetchPersons();
@@ -110,65 +150,13 @@ class SupabaseGenealogyRepository {
   }
 
 
+  // Этот метод мы оставляем для совместимости, но пользоваться им не рекомендуется
+  // для большого дерева (> 200k) в обычном режиме. Для демо может вернуть только корни
   Future<List<FamilyMember>> fetchFamilyMembers() async {
-    final persons = await _fetchPersons();
-    print('Supabase Repository: Fetched ${persons.length} persons from "people" table.');
-    if (persons.isEmpty) return [];
-
-    // Build parent-child relationships
-    final personById = {
-      for (final person in persons) person.id: person,
-    };
-    
-    print('Supabase: Verifying links for ${persons.length} persons...');
-    int linksFound = 0;
-    final childrenByParentId = <String, List<String>>{};
-    for (final person in persons) {
-      if (person.parentId != null) {
-        if (personById.containsKey(person.parentId)) {
-          linksFound++;
-          childrenByParentId
-              .putIfAbsent(person.parentId!, () => [])
-              .add(person.id);
-        } else {
-          print('Supabase WARNING: parent_id "${person.parentId}" for "${person.name}" NOT FOUND in people list!');
-        }
-      }
-    }
-    print('Supabase: Total valid parent-child links found: $linksFound');
-
-    // Convert to FamilyMember
-    final members = <String, FamilyMember>{};
-    for (final person in persons) {
-      final member = _mapPersonToFamilyMember(person);
-      members[member.id] = member;
-    }
-
-    // Assign children to each member
-    final result = members.values
-        .map(
-          (member) {
-            final rawId = member.id.replaceFirst('person-', '');
-            final childIds = (childrenByParentId[rawId] ?? [])
-                .map((id) => 'person-$id')
-                .toList();
-            return member.copyWith(childrenIds: childIds);
-          },
-        )
-        .toList();
-
-    // Debug: Find roots
-    final allChildIds = result.expand((m) => m.childrenIds).toSet();
-    final roots = result.where((m) => !allChildIds.contains(m.id)).toList();
-    print('Supabase: Identified ${roots.length} roots: ${roots.map((r) => r.fullName).join(', ')}');
-    if (roots.isEmpty && result.isNotEmpty) {
-      print('Supabase Warning: No roots found! Circular dependency or missing parents?');
-    }
-
-    return result;
+    return getRoots();
   }
 
-  FamilyMember _mapPersonToFamilyMember(Person person) {
+  FamilyMember _mapPersonToFamilyMember(Person person, {bool hasChildren = false}) {
     // Используем 'path' для красивого отображения иерархии в описании
     final breadcrumbs = person.path ?? person.name;
     final story = 'Шежіре жолы: $breadcrumbs\n\n'
@@ -192,6 +180,9 @@ class SupabaseGenealogyRepository {
       story: story,
       role: role,
       highlights: highlights,
+      // Мы добавляем фиктивный childId, если у person в БД есть дети, чтобы UI показал кнопку "+"
+      // В FamilyTreeView мы проверяем наличие элементов, поэтому просто добавим маркер
+      childrenIds: hasChildren ? const ['has_children_marker'] : const [],
     );
   }
 

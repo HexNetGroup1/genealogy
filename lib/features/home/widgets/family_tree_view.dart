@@ -8,10 +8,12 @@ class FamilyTreeView extends StatefulWidget {
     super.key,
     required this.members,
     required this.onMemberSelected,
+    required this.onLoadChildren,
   });
 
   final List<FamilyMember> members;
   final ValueChanged<FamilyMember> onMemberSelected;
+  final Future<List<FamilyMember>> Function(String parentId) onLoadChildren;
 
   @override
   State<FamilyTreeView> createState() => _FamilyTreeViewState();
@@ -41,16 +43,38 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
   
   int _expandDepth = 1;
   Set<String> _expandedIds = {};
+  Set<String> _loadingIds = {}; // Состояния загрузки для узлов
+  List<FamilyMember> _localMembers = []; // Локальная копия загруженных элементов
   bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
+    _localMembers = List.from(widget.members);
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
     )..addListener(_onTick);
     _transformationController = TransformationController();
+  }
+
+  @override
+  void didUpdateWidget(FamilyTreeView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.members != oldWidget.members) {
+      // Инициализируем локальный список, если поменялся внешний
+      // (Например, при полном обновлении корней)
+      // Если мы уже загрузили локально, лучше объединить, но для простоты
+      // пока просто берем внешние + всё что было локально
+      final existingIds = widget.members.map((m) => m.id).toSet();
+      final newLocal = List<FamilyMember>.from(widget.members);
+      for (final m in _localMembers) {
+        if (!existingIds.contains(m.id)) {
+           newLocal.add(m);
+        }
+      }
+      _localMembers = newLocal;
+    }
   }
 
   @override
@@ -110,18 +134,18 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
 
   Map<String, FamilyMember> _getMemberMap() {
     final map = <String, FamilyMember>{};
-    for (final m in widget.members) map[m.id] = m;
+    for (final m in _localMembers) map[m.id] = m;
     return map;
   }
 
   List<FamilyMember> _getRoots(Map<String, FamilyMember> byId) {
     final allChildIds = <String>{};
-    for (final m in widget.members) {
+    for (final m in _localMembers) {
       for (final childId in m.childrenIds) {
         if (byId.containsKey(childId)) allChildIds.add(childId);
       }
     }
-    return widget.members.where((m) => !allChildIds.contains(m.id)).toList();
+    return _localMembers.where((m) => !allChildIds.contains(m.id)).toList();
   }
 
   void _initExpandedIds() {
@@ -225,7 +249,7 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
     for (final id in _targetPositions.keys) {
       if (!_sourcePositions.containsKey(id)) {
         String? parentId;
-        for (final m in widget.members) {
+        for (final m in _localMembers) {
           if (m.childrenIds.contains(id)) {
             parentId = m.id;
             break;
@@ -244,7 +268,7 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
     
     for (final id in disappearing) {
         String? parentId;
-        for (final m in widget.members) {
+        for (final m in _localMembers) {
           if (m.childrenIds.contains(id)) {
             parentId = m.id;
             break;
@@ -269,8 +293,58 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
     });
   }
 
-  void _toggleExpand(String id) {
+  void _toggleExpand(String id) async {
     if (_controller.isAnimating) return; 
+    
+    // Check if we need to load children
+    final byId = _getMemberMap();
+    final member = byId[id];
+    
+    if (member != null && !_expandedIds.contains(id)) {
+      // We are expanding. Do we have the children loaded?
+      final missingChildren = member.childrenIds.any((childId) => !byId.containsKey(childId) && childId != 'has_children_marker');
+      final onlyHasMarker = member.childrenIds.length == 1 && member.childrenIds.first == 'has_children_marker';
+      
+      if (missingChildren || onlyHasMarker) {
+        setState(() {
+           _loadingIds.add(id);
+        });
+        
+        try {
+          final newChildren = await widget.onLoadChildren(id);
+          if (mounted) {
+            setState(() {
+              _loadingIds.remove(id);
+              // Replace the 'has_children_marker' with actual loaded child IDs
+              final updatedMember = member.copyWith(childrenIds: newChildren.map((c) => c.id).toList());
+              
+              // Update local members list
+              final index = _localMembers.indexWhere((m) => m.id == id);
+              if (index != -1) {
+                 _localMembers[index] = updatedMember;
+              }
+              
+              // Add new children that we don't already have
+              final existingIds = _localMembers.map((m) => m.id).toSet();
+              for (final child in newChildren) {
+                 if (!existingIds.contains(child.id)) {
+                    _localMembers.add(child);
+                 }
+              }
+              
+              _expandedIds.add(id);
+            });
+            _animateLayout();
+          }
+        } catch (e) {
+          if (mounted) {
+            setState(() { _loadingIds.remove(id); });
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Қате: $e')));
+          }
+        }
+        return; // Return early, animation will happen after fetch
+      }
+    }
     
     setState(() {
       if (_expandedIds.contains(id)) {
@@ -365,7 +439,7 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-    if (widget.members.isEmpty) return const Center(child: Text('Пусто'));
+    if (_localMembers.isEmpty) return const Center(child: Text('Пусто'));
     
     if (!_initialized) {
       _initExpandedIds();
@@ -381,7 +455,7 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                 Text('${widget.members.length} адам', style: const TextStyle(fontWeight: FontWeight.bold, color: _primaryYellow)),
+                 Text('${_localMembers.length} адам (жүктелген)', style: const TextStyle(fontWeight: FontWeight.bold, color: _primaryYellow)),
                  const Spacer(),
                   IconButton(
                     onPressed: _resetZoom,
@@ -430,8 +504,9 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
                     ..._renderPositions.entries.map((entry) {
                        final member = byId[entry.key];
                        if (member == null) return const SizedBox.shrink();
-                       final hasChildren = member.childrenIds.any((id) => byId.containsKey(id));
+                       final hasChildren = member.childrenIds.isNotEmpty;
                        final isExpanded = _expandedIds.contains(member.id);
+                       final isLoading = _loadingIds.contains(member.id);
 
                        return Positioned(
                          left: entry.value.dx,
@@ -448,6 +523,7 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
                              member: member,
                              hasChildren: hasChildren,
                              isExpanded: isExpanded,
+                             isLoading: isLoading,
                              width: _nodeWidth,
                              height: _nodeHeight,
                              primaryColor: _primaryYellow,
@@ -471,6 +547,7 @@ class _NodeWidget extends StatelessWidget {
     required this.member,
     required this.hasChildren,
     required this.isExpanded,
+    required this.isLoading,
     required this.width,
     required this.height,
     required this.primaryColor,
@@ -479,6 +556,7 @@ class _NodeWidget extends StatelessWidget {
   final FamilyMember member;
   final bool hasChildren;
   final bool isExpanded;
+  final bool isLoading;
   final double width;
   final double height;
   final Color primaryColor;
@@ -539,11 +617,20 @@ class _NodeWidget extends StatelessWidget {
           if (hasChildren)
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: Icon(
-                isExpanded ? Icons.remove_circle : Icons.add_circle,
-                size: 18,
-                color: primaryColor,
-              ),
+              child: isLoading
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: primaryColor,
+                      ),
+                    )
+                  : Icon(
+                      isExpanded ? Icons.remove_circle : Icons.add_circle,
+                      size: 18,
+                      color: primaryColor,
+                    ),
             ),
         ],
       ),
