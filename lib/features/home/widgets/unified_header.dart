@@ -27,46 +27,58 @@ class UnifiedHeader extends StatelessWidget {
 
     Widget content = Container(
       padding: EdgeInsets.only(
-        top: topPadding + 12,
-        bottom: 16,
+        top: topPadding + 14,
+        bottom: 14,
         left: 16,
         right: 16,
       ),
       child: Row(
         children: [
           if (showBackButton)
-            IconButton(
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-              color: Colors.black87,
+            Container(
+              margin: const EdgeInsets.only(left: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                color: Colors.black87,
+              ),
             )
           else
-            const SizedBox(width: 16),
+            const SizedBox(width: 8),
           
           Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: showBackButton ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                    fontSize: 20,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
+            child: Padding(
+              padding: EdgeInsets.only(left: showBackButton ? 8.0 : 4.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    subtitle!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[700],
-                      fontWeight: FontWeight.w500,
+                    title,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF1E1E1E),
+                      fontSize: 22,
+                      letterSpacing: -0.6,
                     ),
                   ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
 
@@ -75,21 +87,35 @@ class UnifiedHeader extends StatelessWidget {
           else if (showBackButton)
             const SizedBox(width: 48) // To balance the back button
           else
-            IconButton(
-              onPressed: () {
-                final user = AuthService().currentUser;
-                if (user == null) {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
-                } else {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-                  );
-                }
-              },
-              icon: const Icon(Icons.admin_panel_settings_outlined, size: 20),
-              color: Colors.black54,
+            Padding(
+              padding: const EdgeInsets.only(right: 4.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFBC02D).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFFBC02D).withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+                child: IconButton(
+                  onPressed: () {
+                    final user = AuthService().currentUser;
+                    if (user == null) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
+                    } else {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.admin_panel_settings_outlined, size: 20),
+                  color: const Color(0xFFF57F17),
+                  tooltip: 'Панель управления',
+                ),
+              ),
             ),
         ],
       ),
@@ -98,9 +124,17 @@ class UnifiedHeader extends StatelessWidget {
     if (isGlass) {
       return ClipRRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
-            color: Colors.white.withValues(alpha: 0.9), // Более плотный фон
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.85),
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  width: 1.0,
+                ),
+              ),
+            ),
             child: content,
           ),
         ),
@@ -108,7 +142,15 @@ class UnifiedHeader extends StatelessWidget {
     }
 
     return Container(
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.black.withValues(alpha: 0.08),
+            width: 1.0,
+          ),
+        ),
+      ),
       child: content,
     );
   }

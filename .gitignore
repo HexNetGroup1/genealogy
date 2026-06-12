@@ -48,4 +48,4 @@ app.*.map.json
 node_modules/
 
 # Database dumps and backups
-*.sql
+/*.sql

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'data/sample_family.dart';
@@ -87,6 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Padding(
             padding: EdgeInsets.only(
               top: MediaQuery.of(context).padding.top + 72, // Больше отступ от хедера
+              bottom: MediaQuery.of(context).padding.bottom + 90, // Отступ под плавающий навбар
             ),
             child: IndexedStack(
               index: _currentIndex,
@@ -114,48 +116,66 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      extendBody: false,
-      bottomNavigationBar: ClipRRect(
+      extendBody: true,
+      bottomNavigationBar: SafeArea(
         child: Container(
+          margin: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          height: 72,
           decoration: BoxDecoration(
-            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(10),
-                blurRadius: 20,
-                offset: const Offset(0, -5),
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+              BoxShadow(
+                color: const Color(0xFFFBC02D).withValues(alpha: 0.03),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _NavItem(
-                    icon: Icons.home_outlined,
-                    selectedIcon: Icons.home,
-                    label: 'Басты',
-                    isSelected: _currentIndex == 0,
-                    onTap: () => setState(() => _currentIndex = 0),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    width: 1.5,
                   ),
-                  _NavItem(
-                    icon: Icons.account_tree_outlined,
-                    selectedIcon: Icons.account_tree,
-                    label: 'Шежіре',
-                    isSelected: _currentIndex == 1,
-                    onTap: () => setState(() => _currentIndex = 1),
-                  ),
-                  _NavItem(
-                    icon: Icons.menu_book_outlined,
-                    selectedIcon: Icons.menu_book,
-                    label: 'Кітап',
-                    isSelected: _currentIndex == 2,
-                    onTap: () => setState(() => _currentIndex = 2),
-                  ),
-                ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _NavItem(
+                      icon: Icons.home_outlined,
+                      selectedIcon: Icons.home,
+                      label: 'Басты',
+                      isSelected: _currentIndex == 0,
+                      onTap: () => setState(() => _currentIndex = 0),
+                    ),
+                    _NavItem(
+                      icon: Icons.account_tree_outlined,
+                      selectedIcon: Icons.account_tree,
+                      label: 'Шежіре',
+                      isSelected: _currentIndex == 1,
+                      onTap: () => setState(() => _currentIndex = 1),
+                    ),
+                    _NavItem(
+                      icon: Icons.menu_book_outlined,
+                      selectedIcon: Icons.menu_book,
+                      label: 'Кітап',
+                      isSelected: _currentIndex == 2,
+                      onTap: () => setState(() => _currentIndex = 2),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -180,7 +200,8 @@ class _NavItem extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  static const Color _primaryGreen = Color(0xFFFBC02D);
+  static const Color _activeColor = Color(0xFFF57F17);
+  static const Color _inactiveColor = Color(0xFF757575);
 
   @override
   Widget build(BuildContext context) {
@@ -188,34 +209,83 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
         padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 20 : 16,
+          horizontal: isSelected ? 18 : 14,
           vertical: 10,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? _primaryGreen.withAlpha(25) : Colors.transparent,
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [
+                    _activeColor.withValues(alpha: 0.12),
+                    _activeColor.withValues(alpha: 0.04),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
           borderRadius: BorderRadius.circular(20),
+          border: isSelected
+              ? Border.all(
+                  color: _activeColor.withValues(alpha: 0.25),
+                  width: 1,
+                )
+              : Border.all(
+                  color: Colors.transparent,
+                  width: 1,
+                ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: _activeColor.withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isSelected ? selectedIcon : icon,
-              color: isSelected ? _primaryGreen : Colors.grey[600],
-              size: 24,
-            ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  color: _primaryGreen,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 1.0, end: isSelected ? 1.15 : 1.0),
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutBack,
+              builder: (context, scale, child) {
+                return Transform.scale(
+                  scale: scale,
+                  child: child,
+                );
+              },
+              child: Icon(
+                isSelected ? selectedIcon : icon,
+                color: isSelected ? _activeColor : _inactiveColor,
+                size: 24,
               ),
-            ],
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              child: isSelected
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(width: 8),
+                        Text(
+                          label,
+                          style: const TextStyle(
+                            color: _activeColor,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
           ],
         ),
       ),
