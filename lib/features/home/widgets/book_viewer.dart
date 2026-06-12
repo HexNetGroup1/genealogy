@@ -206,8 +206,8 @@ class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
               left: 0,
               right: 0,
               child: UnifiedHeader(
-                title: 'Семейная книга',
-                subtitle: 'Страница ${_currentPage + 1} из $_totalPages',
+                title: 'Отбасылық кітап',
+                subtitle: 'Бет ${_currentPage + 1} / $_totalPages',
                 showBackButton: true,
                 actions: [
                   IconButton(
@@ -233,6 +233,7 @@ class _BookViewerState extends State<BookViewer> with TickerProviderStateMixin {
                 onPrev: _prevPage,
                 onNext: _nextPage,
                 onNext10: _jumpForward,
+                onGoToPage: (page) => _goToPage(page - 1),
               ),
             ),
           ],
@@ -366,6 +367,7 @@ class _GlassControls extends StatelessWidget {
     required this.onPrev,
     required this.onNext,
     required this.onNext10,
+    required this.onGoToPage,
   });
 
   final int currentPage;
@@ -374,6 +376,49 @@ class _GlassControls extends StatelessWidget {
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback onNext10;
+  final void Function(int) onGoToPage;
+
+  void _showPageDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.black87,
+        title: const Text('Бетке өту', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: '1 – $totalPages',
+            hintStyle: const TextStyle(color: Colors.white38),
+            enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white38)),
+            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
+          ),
+          onSubmitted: (value) {
+            final page = int.tryParse(value);
+            if (page != null) onGoToPage(page);
+            Navigator.of(ctx).pop();
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Болдырмау', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () {
+              final page = int.tryParse(controller.text);
+              if (page != null) onGoToPage(page);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Өту', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -384,31 +429,39 @@ class _GlassControls extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.6), // Полупрозрачный темный фон
+            color: Colors.black.withOpacity(0.6),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Инфо о странице
-              Text(
-                'Страница $currentPage / $totalPages',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+              GestureDetector(
+                onTap: () => _showPageDialog(context),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Бет $currentPage / $totalPages',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.edit_rounded, color: Colors.white54, size: 14),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
-              // Кнопки
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _NavButton(icon: Icons.keyboard_double_arrow_left_rounded, label: '-10', onTap: onPrev10),
-                  _NavButton(icon: Icons.keyboard_arrow_left_rounded, label: '', iconSize: 32, onTap: onPrev), // Большая
-                  const SizedBox(width: 20), // Разделитель центральный
-                  _NavButton(icon: Icons.keyboard_arrow_right_rounded, label: '', iconSize: 32, onTap: onNext), // Большая
+                  _NavButton(icon: Icons.keyboard_arrow_left_rounded, label: '', iconSize: 32, onTap: onPrev),
+                  const SizedBox(width: 20),
+                  _NavButton(icon: Icons.keyboard_arrow_right_rounded, label: '', iconSize: 32, onTap: onNext),
                   _NavButton(icon: Icons.keyboard_double_arrow_right_rounded, label: '+10', onTap: onNext10),
                 ],
               ),

@@ -73,7 +73,7 @@ class _BookLibraryState extends State<BookLibrary> {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('Загрузка книг...'),
+            Text('Кітаптар жүктелуде...'),
           ],
         ),
       );
@@ -89,13 +89,13 @@ class _BookLibraryState extends State<BookLibrary> {
               const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
               const SizedBox(height: 16),
               Text(
-                'Не удалось загрузить книги',
+                'Кітаптарды жүктеу мүмкін болмады',
                 style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Проверьте подключение к интернету',
+                'Интернет байланысын тексеріңіз',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey,
                 ),
@@ -105,7 +105,7 @@ class _BookLibraryState extends State<BookLibrary> {
               ElevatedButton.icon(
                 onPressed: _loadBooks,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Повторить'),
+                label: const Text('Қайталау'),
               ),
             ],
           ),
@@ -115,7 +115,7 @@ class _BookLibraryState extends State<BookLibrary> {
 
     if (_books == null || _books!.isEmpty) {
       return const Center(
-        child: Text('Книги не найдены'),
+        child: Text('Кітаптар табылмады'),
       );
     }
 
@@ -205,7 +205,7 @@ class _BookCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${book.pageCount} страниц',
+            '${book.pageCount} бет',
             style: TextStyle(
               color: Colors.grey[700],
               fontSize: 13,

@@ -62,7 +62,7 @@ class _BookListScreenState extends State<BookListScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text('Семейные книги'),
+        title: const Text('Отбасылық кітаптар'),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -79,7 +79,7 @@ class _BookListScreenState extends State<BookListScreen> {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('Загрузка списка книг...'),
+            Text('Кітаптар тізімі жүктелуде...'),
           ],
         ),
       );
@@ -95,13 +95,13 @@ class _BookListScreenState extends State<BookListScreen> {
               const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
               const SizedBox(height: 16),
               Text(
-                'Не удалось загрузить книги',
+                'Кітаптарды жүктеу мүмкін болмады',
                 style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Проверьте подключение к интернету',
+                'Интернет байланысын тексеріңіз',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey,
                 ),
@@ -111,7 +111,7 @@ class _BookListScreenState extends State<BookListScreen> {
               ElevatedButton.icon(
                 onPressed: _loadBooks,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Повторить'),
+                label: const Text('Қайталау'),
               ),
             ],
           ),
@@ -121,7 +121,7 @@ class _BookListScreenState extends State<BookListScreen> {
 
     if (_books == null || _books!.isEmpty) {
       return const Center(
-        child: Text('Книги не найдены'),
+        child: Text('Кітаптар табылмады'),
       );
     }
 
@@ -215,7 +215,7 @@ class _BookCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${book.pageCount} страниц',
+                      '${book.pageCount} бет',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],

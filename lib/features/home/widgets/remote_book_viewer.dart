@@ -179,7 +179,7 @@ class _RemoteBookViewerState extends State<RemoteBookViewer> with TickerProvider
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text('Загрузка книги...'),
+                Text('Кітап жүктелуде...'),
               ],
             ),
           )
@@ -217,7 +217,7 @@ class _RemoteBookViewerState extends State<RemoteBookViewer> with TickerProvider
                   right: 0,
                   child: UnifiedHeader(
                     title: widget.book.title,
-                    subtitle: 'Страница ${_currentPage + 1} из ${widget.book.pageCount}',
+                    subtitle: 'Бет ${_currentPage + 1} / ${widget.book.pageCount}',
                     showBackButton: true,
                     actions: [
                       IconButton(
@@ -243,6 +243,7 @@ class _RemoteBookViewerState extends State<RemoteBookViewer> with TickerProvider
                     onPrev: _prevPage,
                     onNext: _nextPage,
                     onNext10: _jumpForward,
+                    onGoToPage: (page) => _goToPage(page - 1),
                   ),
                 ),
               ],
@@ -402,11 +403,11 @@ class _RemoteBookPageState extends State<_RemoteBookPage> {
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 16),
-            Text('Ошибка загрузки', style: Theme.of(context).textTheme.titleMedium),
+            Text('Жүктеу қатесі', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _loadPage,
-              child: const Text('Повторить'),
+              child: const Text('Қайталау'),
             ),
           ],
         ),
@@ -443,6 +444,7 @@ class _GlassControls extends StatelessWidget {
     required this.onPrev,
     required this.onNext,
     required this.onNext10,
+    required this.onGoToPage,
   });
 
   final int currentPage;
@@ -451,6 +453,49 @@ class _GlassControls extends StatelessWidget {
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback onNext10;
+  final void Function(int) onGoToPage;
+
+  void _showPageDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.black87,
+        title: const Text('Бетке өту', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: '1 – $totalPages',
+            hintStyle: const TextStyle(color: Colors.white38),
+            enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white38)),
+            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
+          ),
+          onSubmitted: (value) {
+            final page = int.tryParse(value);
+            if (page != null) onGoToPage(page);
+            Navigator.of(ctx).pop();
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Болдырмау', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () {
+              final page = int.tryParse(controller.text);
+              if (page != null) onGoToPage(page);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Өту', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -468,12 +513,22 @@ class _GlassControls extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Страница $currentPage / $totalPages',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+              GestureDetector(
+                onTap: () => _showPageDialog(context),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Бет $currentPage / $totalPages',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.edit_rounded, color: Colors.white54, size: 14),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
