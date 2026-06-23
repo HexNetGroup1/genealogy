@@ -49,3 +49,4 @@ node_modules/
 
 # Database dumps and backups
 /*.sql
+backup/

@@ -1,8 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../auth/login_screen.dart';
 import '../../admin/admin_dashboard_screen.dart';
 import '../../../services/auth_service.dart';
+import '../../../widgets/liquid_glass.dart';
 
 class UnifiedHeader extends StatelessWidget {
   final String title;
@@ -49,7 +49,7 @@ class UnifiedHeader extends StatelessWidget {
             )
           else
             const SizedBox(width: 8),
-          
+
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(left: showBackButton ? 8.0 : 4.0),
@@ -122,21 +122,40 @@ class UnifiedHeader extends StatelessWidget {
     );
 
     if (isGlass) {
-      return ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.85),
-              border: Border(
-                bottom: BorderSide(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  width: 1.0,
+      // Liquid Glass: full-width bar with hairline bottom border.
+      // BorderRadius.zero — no capsule clip, the bar spans the full width.
+      // The specular rim is suppressed in favour of the explicit bottom border.
+      return LiquidGlass(
+        borderRadius: BorderRadius.zero,
+        blurSigma: 40,
+        saturation: 1.5,
+        tintOpacity: 0.60,
+        addSpecularEdge: false,
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.white.withValues(alpha: 0.25),
+            width: 1.0,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            content,
+            // Subtle top-edge specular highlight (inside the surface)
+            Container(
+              height: 1.0,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0x40FFFFFF), // 25% white
+                    Color(0x0DFFFFFF), // 5% white
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                 ),
               ),
             ),
-            child: content,
-          ),
+          ],
         ),
       );
     }

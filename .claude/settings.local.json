@@ -3,7 +3,8 @@
     "allow": [
       "Bash(flutter devices:*)",
       "Bash(adb devices:*)",
-      "Bash(flutter doctor:*)"
+      "Bash(flutter doctor:*)",
+      "WebSearch"
     ]
   }
 }

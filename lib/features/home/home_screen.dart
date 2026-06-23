@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'data/sample_family.dart';
@@ -9,6 +8,7 @@ import 'widgets/shezhire_info_tab.dart';
 import 'data/supabase_genealogy_repository.dart';
 
 import 'widgets/unified_header.dart';
+import '../../widgets/liquid_glass.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -136,46 +136,40 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          child: ClipRRect(
+          // Liquid Glass capsule: blur 40, saturation 1.5, tint 60% white,
+          // specular rim via _SpecularRimPainter inside LiquidGlass.
+          child: LiquidGlass(
             borderRadius: BorderRadius.circular(28),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.4),
-                    width: 1.5,
+            blurSigma: 40,
+            saturation: 1.5,
+            tintOpacity: 0.60,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _NavItem(
+                    icon: Icons.home_outlined,
+                    selectedIcon: Icons.home,
+                    label: 'Басты',
+                    isSelected: _currentIndex == 0,
+                    onTap: () => setState(() => _currentIndex = 0),
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _NavItem(
-                      icon: Icons.home_outlined,
-                      selectedIcon: Icons.home,
-                      label: 'Басты',
-                      isSelected: _currentIndex == 0,
-                      onTap: () => setState(() => _currentIndex = 0),
-                    ),
-                    _NavItem(
-                      icon: Icons.account_tree_outlined,
-                      selectedIcon: Icons.account_tree,
-                      label: 'Шежіре',
-                      isSelected: _currentIndex == 1,
-                      onTap: () => setState(() => _currentIndex = 1),
-                    ),
-                    _NavItem(
-                      icon: Icons.menu_book_outlined,
-                      selectedIcon: Icons.menu_book,
-                      label: 'Кітап',
-                      isSelected: _currentIndex == 2,
-                      onTap: () => setState(() => _currentIndex = 2),
-                    ),
-                  ],
-                ),
+                  _NavItem(
+                    icon: Icons.account_tree_outlined,
+                    selectedIcon: Icons.account_tree,
+                    label: 'Шежіре',
+                    isSelected: _currentIndex == 1,
+                    onTap: () => setState(() => _currentIndex = 1),
+                  ),
+                  _NavItem(
+                    icon: Icons.menu_book_outlined,
+                    selectedIcon: Icons.menu_book,
+                    label: 'Кітап',
+                    isSelected: _currentIndex == 2,
+                    onTap: () => setState(() => _currentIndex = 2),
+                  ),
+                ],
               ),
             ),
           ),
