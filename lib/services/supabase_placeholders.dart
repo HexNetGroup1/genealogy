@@ -35,6 +35,6 @@ class SupabaseConfig {
   /// Optional project reference (handy when debugging Supabase logs).
   static const String projectRef = String.fromEnvironment(
     'SUPABASE_PROJECT_REF',
-    defaultValue: 'dcbfyjxuoxeufkprrkve',
+    defaultValue: 'genealogy',
   );
 }
