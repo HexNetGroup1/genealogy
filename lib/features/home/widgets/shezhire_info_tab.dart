@@ -46,19 +46,16 @@ class ShezhireInfoTab extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFFFFDE7),
-                Color(0xFFFFF9C4),
-              ],
+            color: Colors.white,
+            border: Border.all(
+              color: const Color(0xFFFBC02D).withAlpha(60),
+              width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFFBC02D).withAlpha(40),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
+                color: const Color(0xFFFBC02D).withAlpha(20),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
               ),
             ],
           ),

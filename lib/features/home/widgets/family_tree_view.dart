@@ -356,61 +356,7 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
     _animateLayout();
   }
 
-  void _changeDepth(int newDepth) {
-     setState(() {
-       _expandDepth = newDepth;
-       _expandedIds = {};
-       final byId = _getMemberMap();
-       final roots = _getRoots(byId);
-       _expandToDepth(roots, byId, 0);
-     });
-     _animateLayout();
-  }
 
-  void _showDepthDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        int tempDepth = _expandDepth;
-        return AlertDialog(
-          title: const Text('Жаю тереңдігі'),
-          content: StatefulBuilder(
-            builder: (context, setDialogState) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$tempDepth',
-                    style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: _primaryYellow),
-                  ),
-                  Slider(
-                    value: tempDepth.toDouble(),
-                    min: 0, max: 10, divisions: 10,
-                    activeColor: _primaryYellow,
-                    onChanged: (v) => setDialogState(() => tempDepth = v.round()),
-                  ),
-                ],
-              );
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Болдырмау'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _changeDepth(tempDepth);
-              },
-              style: FilledButton.styleFrom(backgroundColor: _primaryYellow),
-              child: const Text('Қолдану'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   void _resetZoom() {
     _transformationController.value = Matrix4.identity();
@@ -467,13 +413,6 @@ class _FamilyTreeViewState extends State<FamilyTreeView> with SingleTickerProvid
                     icon: const Icon(Icons.fullscreen_exit_rounded, color: _primaryYellow),
                     tooltip: 'Fit',
                   ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                   onPressed: _showDepthDialog,
-                   icon: const Icon(Icons.unfold_more, size: 18),
-                   label: Text('Тереңдік: $_expandDepth'),
-                   style: FilledButton.styleFrom(backgroundColor: _primaryYellow),
-                 ),
               ],
             ),
           ),

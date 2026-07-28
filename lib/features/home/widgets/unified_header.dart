@@ -27,8 +27,8 @@ class UnifiedHeader extends StatelessWidget {
 
     Widget content = Container(
       padding: EdgeInsets.only(
-        top: topPadding + 14,
-        bottom: 14,
+        top: topPadding + 8,
+        bottom: 8,
         left: 16,
         right: 16,
       ),
@@ -59,11 +59,11 @@ class UnifiedHeader extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                       color: const Color(0xFF1E1E1E),
-                      fontSize: 22,
-                      letterSpacing: -0.6,
+                      fontSize: 17,
+                      letterSpacing: -0.3,
                     ),
                   ),
                   if (subtitle != null) ...[
@@ -137,26 +137,7 @@ class UnifiedHeader extends StatelessWidget {
             width: 1.0,
           ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            content,
-            // Subtle top-edge specular highlight (inside the surface)
-            Container(
-              height: 1.0,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0x40FFFFFF), // 25% white
-                    Color(0x0DFFFFFF), // 5% white
-                  ],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: content,
       );
     }
 

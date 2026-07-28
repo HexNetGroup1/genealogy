@@ -60,7 +60,7 @@ class _BookLibraryState extends State<BookLibrary> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: Colors.white,
       body: _buildBody(),
     );
   }
@@ -126,7 +126,7 @@ class _BookLibraryState extends State<BookLibrary> {
         child: GridView.builder(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.65,
+            childAspectRatio: 0.62,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
@@ -160,8 +160,10 @@ class _BookCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Фиксированная область обложки
           Expanded(
             child: Container(
+              width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
@@ -179,6 +181,8 @@ class _BookCard extends StatelessWidget {
                   child: CachedNetworkImage(
                     imageUrl: book.thumbnailUrl,
                     fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
                     placeholder: (context, url) => Container(
                       color: Colors.grey[200],
                       child: const Center(
@@ -194,25 +198,36 @@ class _BookCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            book.title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Colors.black87,
+          const SizedBox(height: 8),
+          // Название — строго 2 строки, обрезается
+          SizedBox(
+            height: 40,
+            child: Text(
+              book.title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Colors.black87,
+                height: 1.4,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
+          // Кол-во страниц — всегда 1 строка
           Text(
             '${book.pageCount} бет',
             style: TextStyle(
-              color: Colors.grey[700],
-              fontSize: 13,
+              color: Colors.grey[600],
+              fontSize: 12,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
 }
+

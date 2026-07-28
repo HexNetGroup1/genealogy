@@ -83,12 +83,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           Padding(
             padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top + 72, // Больше отступ от хедера
-              bottom: MediaQuery.of(context).padding.bottom + 90, // Отступ под плавающий навбар
+              top: MediaQuery.of(context).padding.top + 54,
             ),
             child: IndexedStack(
               index: _currentIndex,
@@ -112,68 +112,35 @@ class _HomeScreenState extends State<HomeScreen> {
             right: 0,
             child: UnifiedHeader(
               title: _getTitle(),
+              isGlass: false,
             ),
           ),
         ],
       ),
-      extendBody: true,
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-          height: 72,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-              BoxShadow(
-                color: const Color(0xFFFBC02D).withValues(alpha: 0.03),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        selectedItemColor: const Color(0xFFF57F17),
+        unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.white,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Басты',
           ),
-          // Liquid Glass capsule: blur 40, saturation 1.5, tint 60% white,
-          // specular rim via _SpecularRimPainter inside LiquidGlass.
-          child: LiquidGlass(
-            borderRadius: BorderRadius.circular(28),
-            blurSigma: 40,
-            saturation: 1.5,
-            tintOpacity: 0.60,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _NavItem(
-                    icon: Icons.home_outlined,
-                    selectedIcon: Icons.home,
-                    label: 'Басты',
-                    isSelected: _currentIndex == 0,
-                    onTap: () => setState(() => _currentIndex = 0),
-                  ),
-                  _NavItem(
-                    icon: Icons.account_tree_outlined,
-                    selectedIcon: Icons.account_tree,
-                    label: 'Шежіре',
-                    isSelected: _currentIndex == 1,
-                    onTap: () => setState(() => _currentIndex = 1),
-                  ),
-                  _NavItem(
-                    icon: Icons.menu_book_outlined,
-                    selectedIcon: Icons.menu_book,
-                    label: 'Кітап',
-                    isSelected: _currentIndex == 2,
-                    onTap: () => setState(() => _currentIndex = 2),
-                  ),
-                ],
-              ),
-            ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_tree_outlined),
+            activeIcon: Icon(Icons.account_tree),
+            label: 'Шежіре',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.menu_book_outlined),
+            activeIcon: Icon(Icons.menu_book),
+            label: 'Кітап',
+          ),
+        ],
       ),
     );
   }
