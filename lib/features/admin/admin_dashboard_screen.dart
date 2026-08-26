@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../home/data/supabase_genealogy_repository.dart';
 import '../home/models/person.dart';
@@ -16,9 +18,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final _repository = SupabaseGenealogyRepository();
   final _authService = AuthService();
   List<Person> _persons = [];
-  List<Person> _filteredPersons = [];
+  Map<String, String> _parentNames = {};
   bool _isLoading = false;
   final _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  int _currentPage = 0;
+  int _totalCount = 0;
+  int _requestId = 0;
+
+  static const int _pageSize = 50;
 
   static const Color _primaryGreen = Color(0xFFFBC02D);
 
@@ -26,51 +34,68 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     _fetchPersons();
-    _searchController.addListener(_filterPersons);
+    _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  void _filterPersons() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      _filteredPersons = _persons.where((p) {
-        return p.name.toLowerCase().contains(query);
-      }).toList();
+  void _onSearchChanged() {
+    setState(() {});
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      _currentPage = 0;
+      _fetchPersons();
     });
   }
 
   Future<void> _fetchPersons() async {
+    final requestId = ++_requestId;
     setState(() => _isLoading = true);
     try {
-      final persons = await _repository.getAllPersons();
-      if (mounted) {
-        setState(() {
-          _persons = persons;
-          _filterPersons();
-          _isLoading = false;
-        });
-      }
+      final result = await _repository.getPersonsPage(
+        page: _currentPage,
+        pageSize: _pageSize,
+        search: _searchController.text,
+      );
+      final parentNames = await _repository.getPersonNamesByIds(
+        result.items.map((person) => person.parentId).whereType<String>(),
+      );
+      if (!mounted || requestId != _requestId) return;
+      setState(() {
+        _persons = result.items;
+        _parentNames = parentNames;
+        _totalCount = result.totalCount;
+        _isLoading = false;
+      });
     } catch (e) {
       debugPrint('Error: $e');
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted || requestId != _requestId) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Адамдарды жүктеу мүмкін болмады')),
+      );
     }
   }
 
-  void _logout() async {
-    await _authService.signOut();
-    if (mounted) Navigator.of(context).pop();
+  void _changePage(int page) {
+    if (page == _currentPage || page < 0 || page >= _totalPages) return;
+    setState(() => _currentPage = page);
+    _fetchPersons();
   }
 
+  int get _totalPages =>
+      _totalCount == 0 ? 1 : (_totalCount + _pageSize - 1) ~/ _pageSize;
+
   void _editPerson(Person? person) async {
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PersonEditForm(person: person)),
-    );
-    if (result == true) _fetchPersons();
+    final result = await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => PersonEditForm(person: person)));
+    if (result == true) await _fetchPersons();
   }
 
   void _addChild(Person parent) async {
@@ -79,7 +104,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         builder: (_) => PersonEditForm(initialParentId: parent.id),
       ),
     );
-    if (result == true) _fetchPersons();
+    if (result == true) await _fetchPersons();
   }
 
   Future<void> _deletePerson(String id) async {
@@ -105,12 +130,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (confirm == true) {
       try {
         await _repository.deletePerson(id);
-        _fetchPersons();
+        if (_persons.length == 1 && _currentPage > 0) {
+          _currentPage--;
+        }
+        await _fetchPersons();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error deleting: $e')));
         }
       }
     }
@@ -126,7 +154,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             children: [
               SizedBox(height: MediaQuery.of(context).padding.top + 80),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
+                ),
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -143,7 +174,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Аты бойынша іздеу...',
-                      prefixIcon: const Icon(Icons.search, color: _primaryGreen),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: _primaryGreen,
+                      ),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear),
@@ -162,24 +196,42 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               Expanded(
                 child: _isLoading
-                    ? const Center(child: CircularProgressIndicator(color: _primaryGreen))
-                    : _filteredPersons.isEmpty
-                        ? const Center(child: Text('Адамдар табылмады'))
-                        : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
-                            itemCount: _filteredPersons.length,
-                            itemBuilder: (context, index) {
-                              final person = _filteredPersons[index];
-                              return _AdminPersonCard(
-                                person: person,
-                                allPersons: _persons,
-                                onEdit: () => _editPerson(person),
-                                onDelete: () => _deletePerson(person.id),
-                                onAddChild: () => _addChild(person),
-                              );
-                            },
-                          ),
+                    ? const Center(
+                        child: CircularProgressIndicator(color: _primaryGreen),
+                      )
+                    : _persons.isEmpty
+                    ? const Center(child: Text('Адамдар табылмады'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
+                        itemCount: _persons.length,
+                        itemBuilder: (context, index) {
+                          final person = _persons[index];
+                          return _AdminPersonCard(
+                            person: person,
+                            parentName: person.parentId == null
+                                ? null
+                                : _parentNames[person.parentId],
+                            onEdit: () => _editPerson(person),
+                            onDelete: () => _deletePerson(person.id),
+                            onAddChild: () => _addChild(person),
+                          );
+                        },
+                      ),
               ),
+              if (!_isLoading && _totalCount > 0)
+                _PaginationBar(
+                  currentPage: _currentPage,
+                  totalPages: _totalPages,
+                  totalCount: _totalCount,
+                  pageSize: _pageSize,
+                  currentItemCount: _persons.length,
+                  onPrevious: _currentPage == 0
+                      ? null
+                      : () => _changePage(_currentPage - 1),
+                  onNext: _currentPage >= _totalPages - 1
+                      ? null
+                      : () => _changePage(_currentPage + 1),
+                ),
             ],
           ),
           Positioned(
@@ -195,7 +247,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   tooltip: 'Шығу',
                   onPressed: () async {
                     await _authService.signOut();
-                    if (mounted) Navigator.of(context).pop();
+                    if (!mounted) return;
+                    Navigator.of(this.context).pop();
                   },
                 ),
               ],
@@ -209,7 +262,73 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         icon: const Icon(Icons.add),
-        label: const Text('Адам қосу', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: const Text(
+          'Адам қосу',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaginationBar extends StatelessWidget {
+  const _PaginationBar({
+    required this.currentPage,
+    required this.totalPages,
+    required this.totalCount,
+    required this.pageSize,
+    required this.currentItemCount,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  final int currentPage;
+  final int totalPages;
+  final int totalCount;
+  final int pageSize;
+  final int currentItemCount;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final firstItem = currentPage * pageSize + 1;
+    final lastItem = currentPage * pageSize + currentItemCount;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: onPrevious,
+              tooltip: 'Алдыңғы бет',
+              icon: const Icon(Icons.chevron_left_rounded),
+            ),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Бет ${currentPage + 1} / $totalPages',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    '$firstItem–$lastItem / $totalCount',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: onNext,
+              tooltip: 'Келесі бет',
+              icon: const Icon(Icons.chevron_right_rounded),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -217,14 +336,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
 class _AdminPersonCard extends StatelessWidget {
   final Person person;
-  final List<Person> allPersons;
+  final String? parentName;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onAddChild;
 
   const _AdminPersonCard({
     required this.person,
-    required this.allPersons,
+    required this.parentName,
     required this.onEdit,
     required this.onDelete,
     required this.onAddChild,
@@ -232,13 +351,6 @@ class _AdminPersonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String? parentName;
-    if (person.parentId != null) {
-      try {
-        parentName = allPersons.firstWhere((p) => p.id == person.parentId).name;
-      } catch (_) {}
-    }
-
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -269,7 +381,10 @@ class _AdminPersonCard extends StatelessWidget {
                     children: [
                       Text(
                         person.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                       Text(
                         '${parentName != null ? "Род: $parentName | " : ""}Деңгей: ${person.depth ?? 0}',
@@ -319,14 +434,12 @@ class _ActionButton extends StatelessWidget {
     required this.onTap,
     required this.color,
     required this.label,
-    this.tooltip,
   });
 
   final IconData icon;
   final VoidCallback onTap;
   final Color color;
   final String label;
-  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../admin/admin_dashboard_screen.dart';
 import '../home/widgets/unified_header.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -32,7 +33,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text.trim(),
       );
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(builder: (_) => const AdminDashboardScreen()),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -63,12 +66,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.admin_panel_settings_outlined, size: 80, color: _primaryGreen),
+                  const Icon(
+                    Icons.admin_panel_settings_outlined,
+                    size: 80,
+                    color: _primaryGreen,
+                  ),
                   const SizedBox(height: 24),
                   const Text(
                     'Администратор',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _primaryGreen),
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: _primaryGreen,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -99,11 +110,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         backgroundColor: _primaryGreen,
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       child: _isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text('Кіру', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          : const Text(
+                              'Кіру',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -114,10 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
             top: 0,
             left: 0,
             right: 0,
-            child: UnifiedHeader(
-              title: 'Кіру',
-              showBackButton: true,
-            ),
+            child: UnifiedHeader(title: 'Кіру', showBackButton: true),
           ),
         ],
       ),
@@ -148,10 +164,16 @@ class _LoginScreenState extends State<LoginScreen> {
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon, color: _primaryGreen, size: 22),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
           filled: true,
           fillColor: Colors.transparent,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
+          ),
         ),
       ),
     );

@@ -16,7 +16,6 @@ class HomeScreen extends StatefulWidget {
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
-
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final _repository = SupabaseGenealogyRepository();
@@ -64,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1:
         return 'Шежіре';
       case 2:
-        return 'Библиотека';
+        return 'PDF кітапхана';
       default:
         return 'Genealogy';
     }
@@ -136,9 +135,9 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Шежіре',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book_outlined),
-            activeIcon: Icon(Icons.menu_book),
-            label: 'Кітап',
+            icon: Icon(Icons.picture_as_pdf_outlined),
+            activeIcon: Icon(Icons.picture_as_pdf),
+            label: 'PDF',
           ),
         ],
       ),

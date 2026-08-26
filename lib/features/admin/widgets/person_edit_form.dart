@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../home/data/supabase_genealogy_repository.dart';
 import '../../home/models/person.dart';
@@ -21,10 +23,9 @@ class _PersonEditFormState extends State<PersonEditForm> {
   late TextEditingController _birthYearController;
   late TextEditingController _deathYearController;
   late TextEditingController _authorController;
-  
+
   String? _selectedParentId;
   String? _selectedParentName;
-  List<Person> _allPersons = [];
 
   bool _isLoading = false;
 
@@ -35,29 +36,36 @@ class _PersonEditFormState extends State<PersonEditForm> {
     super.initState();
     _nameController = TextEditingController(text: widget.person?.name);
     _birthYearController = TextEditingController(
-        text: widget.person?.birthYear?.toString() ?? '');
+      text: widget.person?.birthYear?.toString() ?? '',
+    );
     _deathYearController = TextEditingController(
-        text: widget.person?.deathYear?.toString() ?? '');
+      text: widget.person?.deathYear?.toString() ?? '',
+    );
     _authorController = TextEditingController(text: widget.person?.author);
     _selectedParentId = widget.person?.parentId ?? widget.initialParentId;
-    _fetchAllPersons();
+    _fetchSelectedParent();
   }
 
-  Future<void> _fetchAllPersons() async {
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _birthYearController.dispose();
+    _deathYearController.dispose();
+    _authorController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchSelectedParent() async {
+    final parentId = _selectedParentId;
+    if (parentId == null) return;
+
     try {
-      final persons = await _repository.getAllPersons();
-      setState(() {
-        _allPersons = persons;
-        if (_selectedParentId != null) {
-          try {
-            _selectedParentName = _allPersons
-                .firstWhere((p) => p.id == _selectedParentId)
-                .name;
-          } catch (_) {}
-        }
-      });
+      final parent = await _repository.getPersonById(parentId);
+      if (mounted && parent != null) {
+        setState(() => _selectedParentName = parent.name);
+      }
     } catch (e) {
-      debugPrint('Error fetching persons: $e');
+      debugPrint('Error fetching parent: $e');
     }
   }
 
@@ -67,7 +75,8 @@ class _PersonEditFormState extends State<PersonEditForm> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _ParentPicker(
-        persons: _allPersons,
+        repository: _repository,
+        excludedPersonId: widget.person?.id,
         onSelected: (person) {
           setState(() {
             _selectedParentId = person.id;
@@ -81,11 +90,14 @@ class _PersonEditFormState extends State<PersonEditForm> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (widget.person == null && (_selectedParentId == null || _selectedParentId!.isEmpty)) {
+    if (widget.person == null &&
+        (_selectedParentId == null || _selectedParentId!.isEmpty)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Нельзя добавить человека без выбора рода (родителя).'),
+            content: Text(
+              'Нельзя добавить человека без выбора рода (родителя).',
+            ),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -141,14 +153,20 @@ class _PersonEditFormState extends State<PersonEditForm> {
           Form(
             key: _formKey,
             child: ListView(
-              padding: EdgeInsets.fromLTRB(24, MediaQuery.of(context).padding.top + 80, 24, 40),
+              padding: EdgeInsets.fromLTRB(
+                24,
+                MediaQuery.of(context).padding.top + 80,
+                24,
+                40,
+              ),
               children: [
                 _buildSectionHeader('Негізгі ақпарат'),
                 _buildTextField(
                   controller: _nameController,
                   label: 'Аты (Міндетті түрде)',
                   icon: Icons.person_outline,
-                  validator: (v) => (v == null || v.isEmpty) ? 'Атын енгізіңіз' : null,
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Атын енгізіңіз' : null,
                 ),
                 const SizedBox(height: 24),
                 _buildSectionHeader('Таңдаулы Род (Әкесі)'),
@@ -170,7 +188,10 @@ class _PersonEditFormState extends State<PersonEditForm> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.account_tree_outlined, color: _primaryGreen),
+                        const Icon(
+                          Icons.account_tree_outlined,
+                          color: _primaryGreen,
+                        ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
@@ -179,19 +200,30 @@ class _PersonEditFormState extends State<PersonEditForm> {
                               Text(
                                 _selectedParentName ?? 'Родты таңдаңыз',
                                 style: TextStyle(
-                                  color: _selectedParentName == null ? Colors.grey : Colors.black87,
-                                  fontWeight: _selectedParentName == null ? FontWeight.normal : FontWeight.bold,
+                                  color: _selectedParentName == null
+                                      ? Colors.grey
+                                      : Colors.black87,
+                                  fontWeight: _selectedParentName == null
+                                      ? FontWeight.normal
+                                      : FontWeight.bold,
                                 ),
                               ),
                               if (_selectedParentId != null)
                                 Text(
                                   'ID: $_selectedParentId',
-                                  style: TextStyle(fontSize: 10, color: Colors.grey[400]),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[400],
+                                  ),
                                 ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                        const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 14,
+                          color: Colors.grey,
+                        ),
                       ],
                     ),
                   ),
@@ -314,14 +346,21 @@ class _PersonEditFormState extends State<PersonEditForm> {
         validator: validator,
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon, color: enabled ? _primaryGreen : Colors.grey, size: 20),
+          prefixIcon: Icon(
+            icon,
+            color: enabled ? _primaryGreen : Colors.grey,
+            size: 20,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide.none,
           ),
           filled: true,
           fillColor: Colors.transparent,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
+          ),
         ),
       ),
     );
@@ -329,33 +368,63 @@ class _PersonEditFormState extends State<PersonEditForm> {
 }
 
 class _ParentPicker extends StatefulWidget {
-  final List<Person> persons;
+  final SupabaseGenealogyRepository repository;
+  final String? excludedPersonId;
   final Function(Person) onSelected;
 
-  const _ParentPicker({required this.persons, required this.onSelected});
+  const _ParentPicker({
+    required this.repository,
+    required this.onSelected,
+    this.excludedPersonId,
+  });
 
   @override
   State<_ParentPicker> createState() => _ParentPickerState();
 }
 
 class _ParentPickerState extends State<_ParentPicker> {
-  late List<Person> _filtered;
+  List<Person> _persons = [];
   final _controller = TextEditingController();
+  Timer? _debounce;
+  bool _isLoading = false;
+  int _requestId = 0;
 
   @override
   void initState() {
     super.initState();
-    _filtered = widget.persons;
-    _controller.addListener(_filter);
+    _controller.addListener(_onSearchChanged);
+    _loadPersons();
   }
 
-  void _filter() {
-    final query = _controller.text.toLowerCase();
-    setState(() {
-      _filtered = widget.persons.where((p) {
-        return p.name.toLowerCase().contains(query);
-      }).toList();
-    });
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), _loadPersons);
+  }
+
+  Future<void> _loadPersons() async {
+    final requestId = ++_requestId;
+    setState(() => _isLoading = true);
+    try {
+      final persons = await widget.repository.searchPersons(_controller.text);
+      if (!mounted || requestId != _requestId) return;
+      setState(() {
+        _persons = persons
+            .where((person) => person.id != widget.excludedPersonId)
+            .toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error searching parents: $e');
+      if (!mounted || requestId != _requestId) return;
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -398,34 +467,36 @@ class _ParentPickerState extends State<_ParentPicker> {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: ListView.builder(
-              itemCount: _filtered.length,
-              itemBuilder: (context, index) {
-                final person = _filtered[index];
-                
-                String? parentOfParent;
-                if (person.parentId != null) {
-                  try {
-                    parentOfParent = widget.persons
-                        .firstWhere((p) => p.id == person.parentId)
-                        .name;
-                  } catch (_) {}
-                }
-
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-                  title: Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(
-                    parentOfParent != null ? 'Род: $parentOfParent' : 'Түп ата',
-                    style: TextStyle(color: Colors.grey[600]),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _persons.isEmpty
+                ? const Center(child: Text('Адамдар табылмады'))
+                : ListView.builder(
+                    itemCount: _persons.length,
+                    itemBuilder: (context, index) {
+                      final person = _persons[index];
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 0,
+                          vertical: 4,
+                        ),
+                        title: Text(
+                          person.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          person.path ?? 'Деңгей: ${person.depth ?? 0}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        onTap: () {
+                          widget.onSelected(person);
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
                   ),
-                  onTap: () {
-                    widget.onSelected(person);
-                    Navigator.pop(context);
-                  },
-                );
-              },
-            ),
           ),
         ],
       ),
