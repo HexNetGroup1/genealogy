@@ -218,20 +218,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         },
                       ),
               ),
-              if (!_isLoading && _totalCount > 0)
-                _PaginationBar(
-                  currentPage: _currentPage,
-                  totalPages: _totalPages,
-                  totalCount: _totalCount,
-                  pageSize: _pageSize,
-                  currentItemCount: _persons.length,
-                  onPrevious: _currentPage == 0
-                      ? null
-                      : () => _changePage(_currentPage - 1),
-                  onNext: _currentPage >= _totalPages - 1
-                      ? null
-                      : () => _changePage(_currentPage + 1),
-                ),
             ],
           ),
           Positioned(
@@ -256,6 +242,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: !_isLoading && _totalCount > 0
+          ? _PaginationBar(
+              currentPage: _currentPage,
+              totalPages: _totalPages,
+              totalCount: _totalCount,
+              pageSize: _pageSize,
+              currentItemCount: _persons.length,
+              onPrevious: _currentPage == 0
+                  ? null
+                  : () => _changePage(_currentPage - 1),
+              onNext: _currentPage >= _totalPages - 1
+                  ? null
+                  : () => _changePage(_currentPage + 1),
+            )
+          : null,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _editPerson(null),
         backgroundColor: _primaryGreen,
