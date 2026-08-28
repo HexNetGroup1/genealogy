@@ -1,6 +1,6 @@
 # Shejire — App Review submission package
 
-Build: **1.0.0 (3)**
+Build: **1.0.0 (4)**
 Bundle ID: **kz.hexnet.geneology**
 
 ## Reply to App Review / Review Notes
@@ -23,7 +23,8 @@ The app has no purchases, subscriptions, advertising, tracking, public registrat
 
 - Physical iPhone 14 Pro Max — iOS 26.5 (23F77)
 - iPhone 17 Simulator — iOS 26.5
-- iPad Pro 13-inch (M5) Simulator — iPadOS 26.5
+
+Build 4 supports iPhone only. iPad is not included in the supported device family.
 
 3. PURPOSE AND TARGET AUDIENCE
 
@@ -87,7 +88,7 @@ Before attaching, watch the entire recording and confirm that the password, noti
 
 ## App Store Connect submission checklist
 
-- Upload and select build **1.0.0 (3)**. Do not select superseded build 2.
+- Upload and select build **1.0.0 (4)**. Do not select superseded builds 2 or 3.
 - Confirm the Privacy Policy URL displays the updated policy dated 28 August 2026.
 - Enter a real review contact name, monitored email, and phone number with country code.
 - Add the non-expiring administrator credentials to App Review Information.
@@ -96,7 +97,7 @@ Before attaching, watch the entire recording and confirm that the password, noti
 - Confirm screenshots show the actual information, genealogy, and PDF screens—not only the splash or sign-in screen.
 - Confirm App Privacy answers match the updated privacy policy and actual Supabase use.
 - Confirm the production shared catalog contains no protected third-party books before submitting.
-- Select build 3, save, choose **Add for Review**, then **Submit for Review**.
+- Select build 4, save, choose **Add for Review**, then **Submit for Review**.
 
 ## Recommended App Privacy answers
 
@@ -110,4 +111,4 @@ Do not declare locally imported PDFs as collected: they remain on-device. Do not
 
 ## Export compliance
 
-The app uses ordinary HTTPS for Supabase and no proprietary/non-exempt encryption. Build 3 contains `ITSAppUsesNonExemptEncryption = NO`.
+The app uses ordinary HTTPS for Supabase and no proprietary/non-exempt encryption. Build 4 contains `ITSAppUsesNonExemptEncryption = NO`.
