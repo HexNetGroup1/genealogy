@@ -3,60 +3,53 @@
 Build: **1.0.0 (4)**
 Bundle ID: **kz.hexnet.geneology**
 
-## Reply to App Review / Review Notes
+## Copy-ready Reply to App Review / Review Notes (under 4,000 characters)
 
-Paste the text below both into the reply to App Review and into the **App Review Information → Notes** field. Attach the screen recording to the reply.
+Copy only the text between the separators below. Paste it into the reply to App Review and into **App Review Information → Notes**. Attach the screen recording to the reply.
 
 ---
 
 Hello App Review Team,
 
-Thank you for your guidance. We have tested the app again and are providing the requested information below.
+Thank you for your guidance. We retested the app and provide all requested information below.
 
 1. SCREEN RECORDING
 
-We attached a screen recording from a physical iPhone 14 Pro Max running iOS 26.5. It begins with a fresh launch and demonstrates the information screen, genealogy navigation, person details, PDF import and page-by-page reading, local PDF deletion, and administrator sign-in.
+Attached is a recording from a physical iPhone 14 Pro Max running iOS 26.5. It begins with launching the app and shows the information screen, genealogy navigation, person details, local PDF import and page-by-page reading, local PDF deletion, and administrator sign-in.
 
-The app has no purchases, subscriptions, advertising, tracking, public registration, or general-user account deletion flow. General users cannot upload or publish server content. The system Files picker requires no contacts, location, camera, or microphone access.
+There are no purchases, subscriptions, ads, tracking, public registration, or general-user accounts. General users cannot upload server content. The Files picker does not request contacts, location, camera, or microphone access.
 
 2. TEST DEVICES
 
 - Physical iPhone 14 Pro Max — iOS 26.5 (23F77)
 - iPhone 17 Simulator — iOS 26.5
 
-Build 4 supports iPhone only. iPad is not included in the supported device family.
+Build 4 supports iPhone only.
 
 3. PURPOSE AND TARGET AUDIENCE
 
-Shejire is an educational reference app about Kazakh genealogy and cultural heritage. It helps Kazakh-speaking families, students, and people interested in family history navigate a large genealogy tree, view biographical details, learn about “shejire,” and read related PDF reference materials.
+Shejire is an educational reference app about Kazakh genealogy and cultural heritage. It helps Kazakh-speaking families, students, and family-history researchers navigate a genealogy tree, view biographical details, learn about shejire, and read related PDF references.
 
 4. ACCESS AND SETUP INSTRUCTIONS
 
-No account or setup is required for the normal user experience:
+No account or setup is needed for normal use. Open “Басты” for introductory information. Open “Шежіре,” tap a person, or expand a branch to navigate the tree. Open “PDF,” tap “Жеке PDF таңдау,” select any valid PDF in Files, and swipe horizontally to read it. Local PDFs remain on-device and are never uploaded. No sample file is required.
 
-1. Launch the app and open “Басты” to view the introductory information.
-2. Open “Шежіре” and tap a person or expand a branch to navigate the genealogy tree and view details.
-3. Open “PDF.” The administrator-curated shared catalog, when populated, is free. For local reading, tap “Жеке PDF таңдау,” choose a PDF in Files, open it, and swipe horizontally. Local PDFs remain on-device and are never uploaded.
-4. The shield icon opens an optional administrator sign-in used only to maintain genealogy records and the shared catalog. The review credentials are supplied separately in App Review Information. There is no public registration flow.
-
-No special settings or sample file are required; any valid PDF works for local import.
+The shield icon opens the optional administrator login used only to maintain genealogy records and the shared catalog. Username: test@gmail.com. The current non-expiring password is provided in the App Review Information password field. There is no public registration flow.
 
 5. EXTERNAL SERVICES AND PLATFORMS
 
-- Supabase, hosted at genealogy.projectmanager.kz: PostgreSQL genealogy data, administrator authentication, shared-book metadata, and PDF storage.
-- Apple system Files/document picker: optional selection of a private local PDF.
+- Supabase at genealogy.projectmanager.kz: genealogy data, administrator authentication, shared-book metadata, and PDF storage.
+- Apple Files picker: optional selection of a private local PDF.
 
-The app uses no AI services, payment processors, advertising SDKs, analytics SDKs, or third-party social login.
+No AI, payments, advertising, analytics, or third-party social login services are used.
 
 6. REGIONAL DIFFERENCES
 
-The app functions consistently in all available regions, with no regional feature, pricing, or content differences. The interface is primarily in Kazakh because of its cultural focus.
+The app works consistently in all regions, with no regional feature, pricing, or content differences. The interface is primarily in Kazakh because of its cultural focus.
 
 7. REGULATED SERVICES AND THIRD-PARTY MATERIAL
 
-The app provides no regulated services. Genealogy entries are factual names and family relationships curated in our database; no third-party content service is accessed at runtime.
-
-Only an authorized administrator can manage the shared book catalog; end users cannot upload or publish books. All shared books are free. At the time of this submission, the production shared catalog contains no protected third-party books. Users may optionally select their own PDF files for private on-device viewing, and those files are never uploaded or shared by the app.
+The app provides no regulated services. Genealogy entries are factual names and family relationships curated in our database; no third-party content service is accessed at runtime. Only an authorized administrator can manage the free shared-book catalog. The production catalog contains no protected third-party books. User-selected PDFs are private, remain on-device, and are never uploaded or shared.
 
 Please let us know if any additional information is required.
 
