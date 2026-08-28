@@ -62,7 +62,7 @@ class _PersonEditFormState extends State<PersonEditForm> {
     try {
       final parent = await _repository.getPersonById(parentId);
       if (mounted && parent != null) {
-        setState(() => _selectedParentName = parent.name);
+        setState(() => _selectedParentName = parent.displayName);
       }
     } catch (e) {
       debugPrint('Error fetching parent: $e');
@@ -80,7 +80,7 @@ class _PersonEditFormState extends State<PersonEditForm> {
         onSelected: (person) {
           setState(() {
             _selectedParentId = person.id;
-            _selectedParentName = person.name;
+            _selectedParentName = person.displayName;
           });
         },
       ),
@@ -481,7 +481,7 @@ class _ParentPickerState extends State<_ParentPicker> {
                           vertical: 4,
                         ),
                         title: Text(
-                          person.name,
+                          person.displayName,
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(

@@ -145,11 +145,12 @@ class SupabaseGenealogyRepository {
     var query = _client.from('people').select();
     final trimmedSearch = search.trim();
     if (trimmedSearch.isNotEmpty) {
-      query = query.ilike('name', '%$trimmedSearch%');
+      query = query.ilike('path', '%$trimmedSearch%');
     }
 
     final List<dynamic> rows = await query
-        .order('name', ascending: true)
+        .order('depth', ascending: true)
+        .order('orderby', ascending: true)
         .order('id', ascending: true)
         .limit(limit);
     return rows

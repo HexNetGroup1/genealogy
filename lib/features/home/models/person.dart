@@ -37,7 +37,9 @@ class Person {
     final rawId = json['id']?.toString().trim().toLowerCase() ?? '';
     final rawParentId = json['parent_id']?.toString().trim().toLowerCase();
     //Treat empty string as null
-    final parentId = (rawParentId != null && rawParentId.isNotEmpty) ? rawParentId : null;
+    final parentId = (rawParentId != null && rawParentId.isNotEmpty)
+        ? rawParentId
+        : null;
 
     return Person(
       id: rawId,
@@ -82,7 +84,24 @@ class Person {
 
   factory Person.fromMap(Map<String, dynamic> map) => Person.fromJson(map);
 
-  String get displayName => name;
+  String get displayName {
+    final normalizedName = name.trim();
+    if (normalizedName.isNotEmpty && normalizedName != '-') {
+      return normalizedName;
+    }
+
+    final normalizedPath = path?.trim();
+    if (normalizedPath != null && normalizedPath.isNotEmpty) {
+      final pathParts = normalizedPath
+          .split(RegExp(r'\s*(?:>|\.)\s*'))
+          .map((part) => part.trim())
+          .where((part) => part.isNotEmpty && part != '-')
+          .toList();
+      if (pathParts.isNotEmpty) return pathParts.last;
+    }
+
+    return 'Аты көрсетілмеген';
+  }
 
   DateTime? get birthDate {
     if (birthYear == null) return null;
