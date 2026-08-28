@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -10,6 +12,23 @@ class PersonPage {
 
   final List<Person> items;
   final int totalCount;
+}
+
+@visibleForTesting
+String generatePersonId([Random? random]) {
+  final secureRandom = random ?? Random.secure();
+  final bytes = List<int>.generate(16, (_) => secureRandom.nextInt(256));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+  final hex = bytes
+      .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+      .join();
+  return '${hex.substring(0, 8)}-'
+      '${hex.substring(8, 12)}-'
+      '${hex.substring(12, 16)}-'
+      '${hex.substring(16, 20)}-'
+      '${hex.substring(20)}';
 }
 
 class SupabaseGenealogyRepository {
@@ -184,7 +203,9 @@ class SupabaseGenealogyRepository {
     }
 
     final data = person.toJson();
-    data.remove('id'); // Supabase generates UUID
+    // The imported table uses a text primary key without a database default.
+    // Generate an ID for records created in the admin panel.
+    data['id'] = person.id.isEmpty ? generatePersonId() : person.id;
     data.remove('created_at');
     data.remove('updated_at');
 

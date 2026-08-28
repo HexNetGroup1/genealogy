@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../home/data/supabase_genealogy_repository.dart';
 import '../../home/models/person.dart';
@@ -90,6 +91,18 @@ class _PersonEditFormState extends State<PersonEditForm> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final birthYear = int.tryParse(_birthYearController.text);
+    final deathYear = int.tryParse(_deathYearController.text);
+    if (birthYear != null && deathYear != null && deathYear < birthYear) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Қайтыс болған жылы туған жылынан ерте болмауы керек.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     if (widget.person == null &&
         (_selectedParentId == null || _selectedParentId!.isEmpty)) {
       if (mounted) {
@@ -111,8 +124,8 @@ class _PersonEditFormState extends State<PersonEditForm> {
         id: widget.person?.id ?? '',
         name: _nameController.text.trim(),
         parentId: _selectedParentId,
-        birthYear: int.tryParse(_birthYearController.text),
-        deathYear: int.tryParse(_deathYearController.text),
+        birthYear: birthYear,
+        deathYear: deathYear,
         author: _authorController.text.trim(),
         depth: widget.person?.depth,
         path: widget.person?.path,
@@ -131,10 +144,11 @@ class _PersonEditFormState extends State<PersonEditForm> {
 
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
+      debugPrint('Error saving person: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка сохранения: $e'),
+          const SnackBar(
+            content: Text('Сақтау мүмкін болмады. Қайтадан көріңіз.'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -230,26 +244,11 @@ class _PersonEditFormState extends State<PersonEditForm> {
                 ),
                 const SizedBox(height: 24),
                 _buildSectionHeader('Өмір сүрген жылдары'),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _birthYearController,
-                        label: 'Туған жылы',
-                        icon: Icons.calendar_today_outlined,
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _deathYearController,
-                        label: 'Қайтыс болған жылы',
-                        icon: Icons.event_busy_outlined,
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
+                _buildYearFields(),
+                const SizedBox(height: 8),
+                Text(
+                  'Жылды таңдау үшін өрісті басыңыз. Белгісіз болса бос қалдырыңыз.',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
                 const SizedBox(height: 24),
                 _buildSectionHeader('Қосымша'),
@@ -315,6 +314,120 @@ class _PersonEditFormState extends State<PersonEditForm> {
     );
   }
 
+  Widget _buildYearFields() {
+    final birthField = _buildTextField(
+      controller: _birthYearController,
+      label: 'Туған жылы',
+      icon: Icons.calendar_today_outlined,
+      readOnly: true,
+      onTap: () => _selectYear(
+        controller: _birthYearController,
+        title: 'Туған жылын таңдаңыз',
+      ),
+      suffixIcon: const Icon(Icons.arrow_drop_down),
+    );
+    final deathField = _buildTextField(
+      controller: _deathYearController,
+      label: 'Қайтыс болған жылы',
+      icon: Icons.event_busy_outlined,
+      readOnly: true,
+      onTap: () => _selectYear(
+        controller: _deathYearController,
+        title: 'Қайтыс болған жылын таңдаңыз',
+      ),
+      suffixIcon: const Icon(Icons.arrow_drop_down),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 600) {
+          return Column(
+            children: [birthField, const SizedBox(height: 16), deathField],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: birthField),
+            const SizedBox(width: 16),
+            Expanded(child: deathField),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _selectYear({
+    required TextEditingController controller,
+    required String title,
+  }) async {
+    FocusScope.of(context).unfocus();
+    final currentYear = DateTime.now().year;
+    var selectedYear = (int.tryParse(controller.text) ?? currentYear).clamp(
+      1,
+      currentYear,
+    );
+    final scrollController = FixedExtentScrollController(
+      initialItem: selectedYear - 1,
+    );
+
+    final result = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: 360,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(sheetContext),
+                      child: const Text('Болдырмау'),
+                    ),
+                    Expanded(
+                      child: Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.pop(sheetContext, selectedYear),
+                      child: const Text('Дайын'),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: CupertinoPicker(
+                  scrollController: scrollController,
+                  itemExtent: 44,
+                  onSelectedItemChanged: (index) => selectedYear = index + 1,
+                  children: [
+                    for (var year = 1; year <= currentYear; year++)
+                      Center(child: Text('$year')),
+                  ],
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => Navigator.pop(sheetContext, 0),
+                icon: const Icon(Icons.clear),
+                label: const Text('Жылды өшіру'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    scrollController.dispose();
+
+    if (result == null || !mounted) return;
+    setState(() => controller.text = result == 0 ? '' : '$result');
+  }
+
   Widget _buildTextField({
     TextEditingController? controller,
     String? initialValue,
@@ -323,6 +436,9 @@ class _PersonEditFormState extends State<PersonEditForm> {
     bool enabled = true,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    bool readOnly = false,
+    VoidCallback? onTap,
+    Widget? suffixIcon,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -344,6 +460,8 @@ class _PersonEditFormState extends State<PersonEditForm> {
         enabled: enabled,
         keyboardType: keyboardType,
         validator: validator,
+        readOnly: readOnly,
+        onTap: onTap,
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(
@@ -351,6 +469,7 @@ class _PersonEditFormState extends State<PersonEditForm> {
             color: enabled ? _primaryGreen : Colors.grey,
             size: 20,
           ),
+          suffixIcon: suffixIcon,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide.none,
